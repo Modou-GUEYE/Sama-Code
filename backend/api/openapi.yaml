@@ -1,0 +1,319 @@
+openapi: 3.1.0
+info:
+  title: Sama Code API
+  version: 0.1.0
+  description: |
+    API REST de Sama Code. Phase 2 : authentification par téléphone, profil, catégories de permis.
+    Toutes les erreurs suivent le format `{"error": {"code", "message", "details"}}` ;
+    `message` est en français et affichable tel quel, `code` est stable.
+servers:
+  - url: http://localhost:8080/api/v1
+
+security:
+  - bearer: []
+
+paths:
+  /auth/otp/request:
+    post:
+      summary: Envoyer un code SMS
+      description: |
+        `register` exige un numéro sans compte (sinon 409) ; `login` et `reset_pin` exigent un compte (sinon 404).
+        Un code toutes les 60 s et 5 codes par heure maximum par numéro.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone_number, purpose]
+              properties:
+                phone_number: { type: string, example: "77 123 45 67" }
+                purpose: { $ref: "#/components/schemas/Purpose" }
+      responses:
+        "202":
+          description: Code envoyé (valable 5 min)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: sent }
+                  expires_in_seconds: { type: integer, example: 300 }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "502": { $ref: "#/components/responses/Error" }
+
+  /auth/otp/verify:
+    post:
+      summary: Vérifier un code SMS
+      description: |
+        5 essais par code. `login` renvoie directement `tokens` (et débloque un compte bloqué) ;
+        `register` et `reset_pin` renvoient un `verification_token` à usage unique valable 10 min.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone_number, purpose, code]
+              properties:
+                phone_number: { type: string }
+                purpose: { $ref: "#/components/schemas/Purpose" }
+                code: { type: string, example: "482913" }
+      responses:
+        "200":
+          description: Code valide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verification_token: { type: string }
+                  tokens: { $ref: "#/components/schemas/TokenPair" }
+        "400": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /auth/register:
+    post:
+      summary: Créer le compte après vérification du numéro
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verification_token, display_name, preferred_language, learning_mode, pin]
+              properties:
+                verification_token: { type: string }
+                display_name: { type: string, maxLength: 80 }
+                preferred_language: { $ref: "#/components/schemas/Language" }
+                learning_mode: { $ref: "#/components/schemas/LearningMode" }
+                pin: { $ref: "#/components/schemas/PIN" }
+      responses:
+        "201":
+          description: Compte créé, session ouverte
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /auth/login:
+    post:
+      summary: Se connecter avec le PIN
+      description: 5 erreurs consécutives bloquent le compte 15 min (423). Le déblocage immédiat passe par un OTP `login`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone_number, pin]
+              properties:
+                phone_number: { type: string }
+                pin: { type: string }
+      responses:
+        "200":
+          description: Session ouverte
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "401":
+          description: Identifiants incorrects (`details.remaining_attempts` si le numéro existe)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+        "403": { $ref: "#/components/responses/Error" }
+        "423":
+          description: Compte bloqué (`details.locked_until`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  /auth/pin/reset:
+    post:
+      summary: Définir un nouveau PIN après vérification par OTP `reset_pin`
+      description: Débloque le compte et ferme toutes les autres sessions.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verification_token, pin]
+              properties:
+                verification_token: { type: string }
+                pin: { $ref: "#/components/schemas/PIN" }
+      responses:
+        "200":
+          description: PIN changé, nouvelle session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /auth/refresh:
+    post:
+      summary: Renouveler la session (rotation du jeton de rafraîchissement)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          description: Nouvelle paire de jetons ; l'ancien jeton de rafraîchissement est révoqué
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /auth/logout:
+    post:
+      summary: Fermer la session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "204": { description: Session fermée }
+
+  /me:
+    get:
+      summary: Consulter son profil
+      responses:
+        "200":
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/Error" }
+    patch:
+      summary: Modifier son nom, sa langue ou son mode d'apprentissage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: { type: string, maxLength: 80 }
+                preferred_language: { $ref: "#/components/schemas/Language" }
+                learning_mode: { $ref: "#/components/schemas/LearningMode" }
+      responses:
+        "200":
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /license-categories:
+    get:
+      summary: Lister les catégories de permis actives
+      responses:
+        "200":
+          description: Catégories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/LicenseCategory" }
+        "401": { $ref: "#/components/responses/Error" }
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Error:
+      description: Erreur normalisée
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  schemas:
+    Purpose:
+      type: string
+      enum: [register, login, reset_pin]
+    Language:
+      type: string
+      enum: [fr, wo]
+    LearningMode:
+      type: string
+      enum: [text, audio]
+    PIN:
+      type: string
+      pattern: "^[0-9]{4}$"
+      description: 4 chiffres ; les suites évidentes (0000, 1234, 9876…) sont refusées.
+
+    TokenPair:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        access_token: { type: string }
+        access_token_expires_at: { type: string, format: date-time }
+        refresh_token: { type: string }
+        refresh_token_expires_at: { type: string, format: date-time }
+
+    Me:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+        phone_number: { type: string, example: "+221771234567" }
+        preferred_language: { $ref: "#/components/schemas/Language" }
+        learning_mode: { $ref: "#/components/schemas/LearningMode" }
+        roles:
+          type: array
+          items: { type: string, enum: [candidate, editor, validator, admin] }
+        created_at: { type: string, format: date-time }
+
+    LicenseCategory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: B }
+        name: { type: string, example: Permis B }
+        series_count: { type: integer, example: 12 }
+        questions_per_series: { type: integer, example: 25 }
+        max_faults: { type: integer, example: 4 }
+        exam_duration_minutes: { type: integer, example: 20 }
+
+    ErrorBody:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: invalid_pin }
+            message: { type: string, example: Le code PIN doit contenir exactement 4 chiffres. }
+            details: { type: object, additionalProperties: true }

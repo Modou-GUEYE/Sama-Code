@@ -1,0 +1,33 @@
+# Environnement de développement : PostgreSQL + MinIO (stockage S3 des audios et images).
+# Démarrer : docker compose up -d   (avec Colima : colima start d'abord)
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: samacode
+      POSTGRES_PASSWORD: samacode
+      POSTGRES_DB: samacode
+    ports:
+      - "127.0.0.1:5433:5432"   # 5433 pour ne pas entrer en conflit avec le PostgreSQL local
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U samacode"]
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest   # à épingler sur une version précise avant la production
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: samacode
+      MINIO_ROOT_PASSWORD: samacode-dev-secret
+    ports:
+      - "127.0.0.1:9000:9000"   # API S3
+      - "127.0.0.1:9001:9001"   # console web
+    volumes:
+      - miniodata:/data
+
+volumes:
+  pgdata:
+  miniodata:

@@ -1,0 +1,26 @@
+# Secrets
+.env
+*.env.local
+
+# Go
+backend/bin/
+*.test
+coverage.out
+
+# Node / React
+node_modules/
+admin/dist/
+
+# Flutter
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins*
+
+# OS / éditeurs
+.DS_Store
+.idea/
+.vscode/
+~$*
+
+# Cahier des charges : document de travail, non publié
+Cahier_des_charges_Sama_Code.*
