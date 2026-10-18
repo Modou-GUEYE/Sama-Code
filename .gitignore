@@ -24,3 +24,7 @@ mobile/.flutter-plugins*
 
 # Cahier des charges : document de travail, non publié
 Cahier_des_charges_Sama_Code.*
+
+# Contexte local pour Claude Code, non publié
+CLAUDE.md
+.claude/

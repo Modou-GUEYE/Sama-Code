@@ -12,7 +12,7 @@ lettrées comme illettrées (français et wolof, texte et audio).
 | [admin/](admin/) | Administration React + TypeScript | Phase 3 |
 | [docs/](docs/) | Cadrage fonctionnel et technique | À jour |
 
-Contexte complet pour le développement : [CLAUDE.md](CLAUDE.md).
+Cadrage fonctionnel et technique complet : [docs/](docs/).
 
 ## Démarrer l'API en local
 
