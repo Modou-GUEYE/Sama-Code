@@ -1,17 +1,24 @@
-# sama_code
+# Sama Code — application mobile
 
-A new Flutter project.
+Application Flutter (Android, iOS) organisée en MVVM : `lib/core` (API, stockage,
+traductions fr/wo, thème), `lib/data` (modèles, repositories), `lib/features`
+(un dossier par écran, avec `views/` et `viewmodels/`), `lib/shared/widgets`.
 
-## Getting Started
+## Lancer sur un téléphone Android branché en USB
 
-This project is a starting point for a Flutter application.
+L'API doit tourner sur le Mac (`cd ../backend && make run`).
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+adb reverse tcp:8080 tcp:8080     # le téléphone joint l'API par le câble
+flutter run --dart-define=API_BASE_URL=http://localhost:8080/api/v1
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Sans `--dart-define`, l'app vise `http://10.0.2.2:8080/api/v1` (API locale vue
+depuis l'émulateur Android).
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Tests et qualité
+
+```bash
+flutter analyze
+flutter test
+```
