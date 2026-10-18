@@ -28,3 +28,6 @@ Cahier_des_charges_Sama_Code.*
 # Contexte local pour Claude Code, non publié
 CLAUDE.md
 .claude/
+
+# Médias stockés localement en développement
+backend/var/

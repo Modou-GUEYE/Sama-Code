@@ -14,6 +14,7 @@ import (
 	"samacode/backend/internal/auth"
 	"samacode/backend/internal/config"
 	"samacode/backend/internal/database"
+	"samacode/backend/internal/media"
 	"samacode/backend/internal/server"
 	"samacode/backend/migrations"
 )
@@ -57,6 +58,11 @@ func run() error {
 	authCfg := auth.DefaultConfig()
 	authCfg.RefreshTokenTTL = cfg.RefreshTokenTTL
 
+	mediaStorage, err := media.NewLocalStorage(cfg.MediaDir)
+	if err != nil {
+		return err
+	}
+
 	authSvc := auth.NewService(pool, tokens, sms, cfg.OTPSecret, authCfg)
 	if cfg.SMSProvider == "log" && !cfg.IsProduction() {
 		authSvc.ExposeDevCodes()
@@ -69,6 +75,7 @@ func run() error {
 			DB:                pool,
 			Tokens:            tokens,
 			Auth:              authSvc,
+			Media:             mediaStorage,
 			TrustProxyHeaders: cfg.TrustProxyHeaders,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,

@@ -50,7 +50,7 @@
 |---|---|---|
 | 1. Cadrage et conception | Parcours UX, règles détaillées, modèle de données, architecture, validation des contenus | Terminé (maquettes UX à faire) |
 | 2. Socle technique | Dépôts, environnements, API Go, PostgreSQL, migrations, auth, CI/CD | Terminé le 18/10/2026 (fournisseur SMS et hébergement en attente) |
-| 3. Administration pédagogique | Catégories, cours, médias, questions, séries, publication | À faire |
+| 3. Administration pédagogique | Catégories, cours, médias, questions, séries, publication | API faite (18/10/2026) ; interface React en cours |
 | 4. Moteur d'examen | Choix de série, sessions, chronomètre, réponses, soumission, calcul, résultats | À faire |
 | 5. Application Flutter | MVVM, cours écrits/audio, QCM, examens, résultats, progression | À faire |
 | 6. Hors connexion | Téléchargements, stockage local, examen hors ligne, reprise, synchronisation | À faire |

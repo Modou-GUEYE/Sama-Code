@@ -112,3 +112,9 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS) error {
 	}
 	return nil
 }
+
+// IsForeignKeyViolation : référence vers une ligne inexistante (23503) ou encore utilisée.
+func IsForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
+}

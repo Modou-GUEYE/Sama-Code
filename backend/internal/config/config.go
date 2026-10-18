@@ -18,6 +18,7 @@ type Config struct {
 	JWTSecret         []byte
 	OTPSecret         []byte
 	SMSProvider       string // log (dev) | … (à choisir, Q12)
+	MediaDir          string // stockage local des médias (dev) ; S3 en production (Q8)
 	AccessTokenTTL    time.Duration
 	RefreshTokenTTL   time.Duration
 }
@@ -32,6 +33,7 @@ func Load() (Config, error) {
 		JWTSecret:   []byte(os.Getenv("JWT_SECRET")),
 		OTPSecret:   []byte(os.Getenv("OTP_SECRET")),
 		SMSProvider: getenv("SMS_PROVIDER", "log"),
+		MediaDir:    getenv("MEDIA_DIR", "var/media"),
 	}
 
 	var errs []error

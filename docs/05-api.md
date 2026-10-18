@@ -73,21 +73,48 @@ Le serveur vérifie catégorie, série publiée, appartenance série ↔ catégo
 autorisation, puis renvoie la session et les questions dans l'ordre, sans les
 bonnes réponses.
 
-## Administration
+## Administration (implémentée en phase 3)
+
+Toutes les routes `/admin/*` exigent un rôle `editor`, `validator` ou `admin` ;
+celles marquées **admin** exigent le rôle `admin`. Les changements de rôle prennent
+effet au renouvellement du jeton d'accès (15 min au plus).
+
+**Cycle de publication** (`POST …/status {"status": …}`) : `draft → in_review`
+(éditeur), `in_review → published` (validateur), `published → draft | archived`
+(validateur), `archived → draft` (admin). Soumettre ou publier exige le contenu
+complet en **fr et en wo**.
 
 | Méthode | Endpoint | Rôle |
 |---|---|---|
-| POST | `/admin/courses` | Créer un cours |
-| POST | `/admin/questions` | Créer une question |
-| PATCH | `/admin/questions/{id}` | Modifier une question |
-| POST | `/admin/exam-series` | Créer une série |
-| PUT | `/admin/exam-series/{id}/questions` | Définir questions et ordre |
-| POST | `/admin/exam-series/{id}/publish` | Publier une série validée |
-| PATCH | `/admin/license-categories/{id}` | Modifier les paramètres d'une catégorie (dont `exam_duration_minutes`, `max_faults`) |
-| GET | `/admin/statistics` | Statistiques |
+| GET | `/admin/statistics` | Tableau de bord : comptes, contenus par statut, séries publiées par permis |
+| GET | `/admin/license-categories` | Permis, y compris inactifs |
+| PATCH | `/admin/license-categories/{id}` | **admin** — nom, séries, questions par série, fautes max, durée |
+| GET | `/admin/users?search=` | **admin** — comptes et rôles |
+| PUT | `/admin/users/{id}/roles` | **admin** — remplacer les rôles (pas d'auto-rétrogradation) |
+| POST | `/admin/media` | Envoyer un fichier (multipart `file`) : PNG/JPEG/WEBP ≤ 5 Mo, MP3/M4A/OGG/WAV ≤ 15 Mo |
+| GET | `/admin/media?type=audio\|image` | Médias récents |
+| GET | `/media/{id}/file` | **public** — lire un fichier (cache immuable, lecture partielle) |
+| GET | `/admin/questions?status=&search=&page=` | Liste paginée |
+| POST | `/admin/questions` | Créer (fr obligatoire, wo possible plus tard) |
+| GET / PUT | `/admin/questions/{id}` | Lire / remplacer. Modifier une question publiée la repasse en brouillon (version + 1) ; refusé si elle est dans une série publiée |
+| POST | `/admin/questions/{id}/status` | Cycle de publication |
+| GET | `/admin/exam-series?license_category_id=` | Séries |
+| POST | `/admin/exam-series` | Créer `{license_category_id, series_number}` |
+| GET | `/admin/exam-series/{id}` | Série + questions dans l'ordre |
+| PUT | `/admin/exam-series/{id}/questions` | Composition et ordre `{question_ids: […]}` ; repasse la série en brouillon |
+| POST | `/admin/exam-series/{id}/status` | Publier = nombre exact de questions, toutes publiées → **instantané immuable versionné** |
+| GET / POST | `/admin/course-categories` | Thèmes |
+| PUT | `/admin/course-categories/{id}` | Modifier un thème |
+| GET / POST | `/admin/courses?category_id=` | Cours |
+| GET / PUT | `/admin/courses/{id}` | Cours + leçons |
+| POST | `/admin/courses/{id}/status` | Cycle de publication |
+| POST | `/admin/courses/{id}/lessons` | Créer une leçon |
+| GET / PUT | `/admin/lessons/{id}` | Leçon + blocs |
+| PUT | `/admin/lessons/{id}/contents` | Blocs `{fr: [{content_type, text, media_id}], wo: […]}` |
+| POST | `/admin/lessons/{id}/status` | Cycle de publication |
 
-Liste initiale : les CRUD complets (leçons, médias, utilisateurs, rôles, audit,
-résultats) seront à ajouter pour couvrir les modules de l'admin.
+Premier administrateur : `go run ./cmd/grant-role -phone "77 123 45 67" -role admin`
+(le compte doit exister : inscription depuis l'application).
 
 ## Exigences transverses
 

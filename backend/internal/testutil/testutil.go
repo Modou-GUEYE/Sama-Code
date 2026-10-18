@@ -32,7 +32,7 @@ func DB(t *testing.T) *pgxpool.Pool {
 	if err := database.Migrate(ctx, pool, migrations.FS); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `TRUNCATE users, otp_codes, refresh_tokens, audit_logs CASCADE`); err != nil {
+	if _, err := pool.Exec(ctx, `TRUNCATE users, otp_codes, refresh_tokens, audit_logs, questions, exam_series, course_categories, media_assets CASCADE`); err != nil {
 		t.Fatal(err)
 	}
 	return pool

@@ -9,16 +9,23 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"samacode/backend/internal/admin"
 	"samacode/backend/internal/auth"
+	"samacode/backend/internal/courses"
+	"samacode/backend/internal/examseries"
 	"samacode/backend/internal/httpx"
 	"samacode/backend/internal/licenses"
+	"samacode/backend/internal/media"
+	"samacode/backend/internal/questions"
 	"samacode/backend/internal/users"
+	"samacode/backend/internal/workflow"
 )
 
 type Deps struct {
 	DB                *pgxpool.Pool
 	Tokens            *auth.Tokens
 	Auth              *auth.Service
+	Media             media.Storage
 	TrustProxyHeaders bool
 }
 
@@ -45,10 +52,30 @@ func NewRouter(d Deps) http.Handler {
 		authLimiter := httpx.NewRateLimiter(6*time.Second, 10)
 		r.With(authLimiter.Middleware).Route("/auth", auth.NewHandler(d.Auth).Routes)
 
+		mediaHandler := media.NewHandler(d.DB, d.Media)
+		mediaHandler.PublicRoutes(r)
+
 		r.Group(func(r chi.Router) {
 			r.Use(d.Tokens.Middleware)
 			users.NewHandler(d.DB).Routes(r)
 			licenses.NewHandler(d.DB).Routes(r)
+
+			// Administration des contenus : éditeurs, validateurs et administrateurs.
+			// Les droits fins (publier, gérer les comptes) sont vérifiés plus bas ou dans les services.
+			r.Route("/admin", func(r chi.Router) {
+				r.Use(httpx.RequireRole(workflow.ContentRoles...))
+				adminHandler := admin.NewHandler(d.DB)
+				adminHandler.StatsRoutes(r)
+				mediaHandler.AdminRoutes(r)
+				questions.NewHandler(questions.NewService(d.DB)).AdminRoutes(r)
+				examseries.NewHandler(examseries.NewService(d.DB)).AdminRoutes(r)
+				courses.NewAdminHandler(d.DB).Routes(r)
+
+				r.Group(func(r chi.Router) {
+					r.Use(httpx.RequireRole(workflow.RoleAdmin))
+					adminHandler.AdminOnlyRoutes(r)
+				})
+			})
 		})
 	})
 
