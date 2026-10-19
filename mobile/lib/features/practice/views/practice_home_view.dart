@@ -164,7 +164,7 @@ class _PracticeHomeViewState extends State<PracticeHomeView> {
               license: l,
               strings: s,
               onSeries: (series) =>
-                  _open(() => repo.seriesQuestions(series.id)),
+                  _open(() => repo.seriesQuestions(series.id), resumable: true),
               onMistakes: () => _open(() => repo.mistakes(l.id)),
             ),
             const SizedBox(height: 24),
