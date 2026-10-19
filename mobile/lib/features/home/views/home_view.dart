@@ -90,7 +90,7 @@ class _HomeBody extends StatelessWidget {
                       child: _FeatureTile(
                         icon: Icons.menu_book_rounded,
                         label: s.t('courses'),
-                        badge: s.t('practice_subtitle'),
+                        badge: s.t('soon'),
                         color: AppColors.green,
                         onTap: () => _soon(context, s),
                       ),
