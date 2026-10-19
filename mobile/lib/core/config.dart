@@ -7,6 +7,14 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:8080/api/v1',
   );
 
+  /// Éditeur et contacts affichés dans « À propos ».
+  static const publisher = 'Sama Code';
+  static const contactEmail = 'info@samacode.com';
+
+  /// Numéro de contact (appel et WhatsApp), au format +221XXXXXXXXX ; vide masque
+  /// les deux boutons.
+  static const contactPhone = '+221773531377';
+
   /// Origine de l'API, pour les médias servis en chemins relatifs (/api/v1/media/…).
   static String mediaUrl(String path) => path.startsWith('http')
       ? path

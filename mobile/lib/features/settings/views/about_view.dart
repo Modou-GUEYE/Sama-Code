@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/config.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 
-/// À propos : à quoi sert l'application, comment elle se lit et s'écoute, version
-/// et licences des logiciels utilisés.
+/// À propos : à quoi sert l'application, comment elle se lit et s'écoute, contacts,
+/// version, licences des logiciels utilisés et éditeur.
 class AboutView extends StatelessWidget {
   const AboutView({super.key});
 
@@ -71,6 +73,58 @@ class AboutView extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 10),
+                child: Text(
+                  s.t('contact_us'),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Ink2.strong,
+                  ),
+                ),
+              ),
+              SoftCard(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  children: [
+                    _LinkRow(
+                      icon: Icons.mail_outline_rounded,
+                      label: AppConfig.contactEmail,
+                      semanticLabel:
+                          '${s.t('email')} : ${AppConfig.contactEmail}',
+                      onTap: () => _open(
+                        context,
+                        Uri(scheme: 'mailto', path: AppConfig.contactEmail),
+                      ),
+                    ),
+                    if (AppConfig.contactPhone.isNotEmpty) ...[
+                      _LinkRow(
+                        icon: Icons.call_rounded,
+                        label: s.t('call'),
+                        value: _formatPhone(AppConfig.contactPhone),
+                        onTap: () => _open(
+                          context,
+                          Uri(scheme: 'tel', path: AppConfig.contactPhone),
+                        ),
+                      ),
+                      _LinkRow(
+                        icon: Icons.chat_rounded,
+                        label: s.t('whatsapp'),
+                        value: _formatPhone(AppConfig.contactPhone),
+                        onTap: () => _open(
+                          context,
+                          Uri.https(
+                            'wa.me',
+                            AppConfig.contactPhone.replaceAll('+', ''),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
               SoftCard(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -92,11 +146,42 @@ class AboutView extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 28),
+              Text(
+                s.t('published_by'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Ink2.muted),
+              ),
+              const Text(
+                AppConfig.publisher,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Ink2.strong,
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  static Future<void> _open(BuildContext context, Uri uri) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final message = context.read<SessionViewModel>().strings.t('cannot_open');
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    ).catchError((_) => false);
+    if (!opened) messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// +221771234567 → 77 123 45 67
+  static String _formatPhone(String e164) {
+    final m = RegExp(r'^\+221(\d{2})(\d{3})(\d{2})(\d{2})$').firstMatch(e164);
+    return m == null ? e164 : '${m[1]} ${m[2]} ${m[3]} ${m[4]}';
   }
 }
 
@@ -169,28 +254,41 @@ class _LinkRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.value,
+    this.semanticLabel,
   });
 
   final IconData icon;
   final String label;
+  final String? value;
+  final String? semanticLabel;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: label,
+      label: semanticLabel ?? (value == null ? label : '$label : $value'),
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
         child: _Row(
           icon: icon,
           label: label,
-          trailing: const Icon(
-            Icons.chevron_right_rounded,
-            size: 28,
-            color: Ink2.muted,
-          ),
+          trailing: value == null
+              ? const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 28,
+                  color: Ink2.muted,
+                )
+              : Text(
+                  value!,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppColors.green,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
         ),
       ),
     );
