@@ -79,6 +79,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(TermsView), findsOneWidget);
+    expect(find.text('En résumé'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('éditée par CFES\u00A0SOLUTION'),
+      300,
+    );
     expect(find.textContaining('éditée par CFES\u00A0SOLUTION'), findsOneWidget);
     expect(find.textContaining('77\u00A0353\u00A013\u00A077'), findsOneWidget);
   });
