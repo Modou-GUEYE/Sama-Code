@@ -53,8 +53,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .nav .icon { flex-shrink: 0; opacity: 0.85; }
 .nav a.active .icon { opacity: 1; }
 .sidebar .spacer { flex: 1; }
-.me { padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.7); }
-.me small { color: var(--muted); display: block; }
+.nav-logout {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 0; border-radius: 14px;
+  background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; text-align: left;
+}
+.nav-logout:hover { background: rgba(255, 255, 255, 0.6); color: var(--red); }
 
 .main { flex: 1; padding: 28px 36px 60px; min-width: 0; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }

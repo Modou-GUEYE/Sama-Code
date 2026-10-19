@@ -2,15 +2,8 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { BookOpen, Car, CircleHelp, ClipboardList, LayoutDashboard, LogOut, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 
-const ROLE_LABEL: Record<string, string> = {
-  editor: 'Éditeur',
-  validator: 'Validateur',
-  admin: 'Administrateur',
-}
-
 export function Layout() {
-  const { me, logout, can } = useAuth()
-  const roles = me?.roles.filter((r) => r !== 'candidate').map((r) => ROLE_LABEL[r]).join(' · ')
+  const { logout, can } = useAuth()
 
   const links = [
     { to: '/', icon: LayoutDashboard, label: 'Tableau de bord', end: true },
@@ -44,14 +37,10 @@ export function Layout() {
           ))}
         </nav>
         <div className="spacer" />
-        <div className="me">
-          <b>{me?.display_name}</b>
-          <small>{roles}</small>
-          <button type="button" className="btn ghost small" style={{ paddingLeft: 0 }} onClick={() => void logout()}>
-            <LogOut size={16} strokeWidth={2.2} />
-            Se déconnecter
-          </button>
-        </div>
+        <button type="button" className="nav-logout" onClick={() => void logout()}>
+          <LogOut size={20} strokeWidth={2.2} />
+          Se déconnecter
+        </button>
       </aside>
       <main className="main">
         <Outlet />
