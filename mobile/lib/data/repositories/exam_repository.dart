@@ -45,6 +45,19 @@ class ExamRepository {
     }
   }
 
+  /// Historique des tentatives, la plus récente d'abord ([page] commence à 1).
+  Future<List<ExamHistoryItem>> history({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final json = await _api.get(
+      '/exam-sessions?page=$page&page_size=$pageSize',
+    );
+    return (json['items'] as List)
+        .map((e) => ExamHistoryItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<ExamSession> get(String id) async =>
       ExamSession.fromJson(await _api.get('/exam-sessions/$id'));
 

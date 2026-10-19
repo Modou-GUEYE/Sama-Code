@@ -16,6 +16,7 @@ import 'package:sama_code/data/repositories/license_repository.dart';
 import 'package:sama_code/data/repositories/practice_repository.dart';
 import 'package:sama_code/data/repositories/profile_repository.dart';
 import 'package:sama_code/features/courses/views/courses_home_view.dart';
+import 'package:sama_code/features/exam/views/history_view.dart';
 import 'package:sama_code/features/home/views/home_view.dart';
 import 'package:sama_code/features/practice/views/practice_home_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,6 +31,8 @@ class FakeExams extends ExamRepository {
   FakeExams(super.api);
   @override
   Future<ExamSession?> current() async => null;
+  @override
+  Future<List<ExamHistoryItem>> history({int page = 1, int pageSize = 20}) async => const [];
 }
 
 class FakeCourses extends CourseRepository {
@@ -85,5 +88,14 @@ void main() {
     await tester.tap(find.text('Entraînement'));
     await tester.pumpAndSettle();
     expect(find.byType(PracticeHomeView), findsOneWidget);
+  });
+
+  testWidgets('accueil : « Mes examens » ouvre l’historique', (tester) async {
+    await pumpHome(tester);
+    await tester.scrollUntilVisible(find.text('Mes examens'), 200);
+    await tester.tap(find.text('Mes examens'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HistoryView), findsOneWidget);
+    expect(find.text('Vous n’avez pas encore passé d’examen.'), findsOneWidget);
   });
 }

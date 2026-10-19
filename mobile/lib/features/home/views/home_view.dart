@@ -10,6 +10,7 @@ import '../../../data/repositories/exam_repository.dart';
 import '../../../data/repositories/license_repository.dart';
 import '../../courses/views/courses_home_view.dart';
 import '../../exam/views/exam_view.dart';
+import '../../exam/views/history_view.dart';
 import '../../exam/views/series_list_view.dart';
 import '../../practice/views/practice_home_view.dart';
 import '../../../shared/widgets/feedback.dart';
@@ -137,6 +138,15 @@ class _HomeBody extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                   ],
+                _MyExamsCard(
+                  strings: s,
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const HistoryView()),
+                    );
+                    await vm.load();
+                  },
+                ),
               ],
             ),
           ),
@@ -437,6 +447,70 @@ class _LicenseCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.arrow_forward_rounded, color: color, size: 26),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Accès à « Mes examens » : historique des tentatives et leurs corrections.
+class _MyExamsCard extends StatelessWidget {
+  const _MyExamsCard({required this.strings, required this.onTap});
+
+  final AppStrings strings;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = strings;
+    return Semantics(
+      button: true,
+      label: '${s.t('my_exams')}. ${s.t('my_exams_subtitle')}',
+      excludeSemantics: true,
+      child: SoftCard(
+        onTap: onTap,
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Ink2.strong.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(
+                Icons.history_rounded,
+                size: 34,
+                color: Ink2.strong,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.t('my_exams'),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Ink2.strong,
+                    ),
+                  ),
+                  Text(
+                    s.t('my_exams_subtitle'),
+                    style: const TextStyle(fontSize: 16, color: Ink2.muted),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 30,
+              color: Ink2.muted,
             ),
           ],
         ),

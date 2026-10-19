@@ -161,8 +161,22 @@ func TestExamFlow(t *testing.T) {
 	mustStatus(t, status, body, http.StatusCreated, "nouvelle tentative")
 	status, body = candidate.do("GET", "/api/v1/exam-sessions", nil)
 	mustStatus(t, status, body, http.StatusOK, "historique")
-	if len(body["items"].([]any)) != 2 {
+	items := body["items"].([]any)
+	if len(items) != 2 {
 		t.Fatalf("historique = %v", body)
+	}
+	// Plus récente d'abord : la tentative en cours n'a pas encore de résultat.
+	newest, oldest := items[0].(map[string]any), items[1].(map[string]any)
+	if newest["status"] != "in_progress" || newest["result"] != nil ||
+		oldest["id"] != sid || oldest["license_code"] != "C" || oldest["series_number"] != 1.0 ||
+		oldest["result"].(map[string]any)["fault_count"] != 5.0 || oldest["submitted_at"] == nil {
+		t.Fatalf("historique = %v / %v", newest, oldest)
+	}
+	// Chacun ne voit que ses propres examens.
+	status, body = other.do("GET", "/api/v1/exam-sessions", nil)
+	mustStatus(t, status, body, http.StatusOK, "historique d'un autre candidat")
+	if len(body["items"].([]any)) != 0 {
+		t.Fatalf("historique d'un autre candidat = %v", body)
 	}
 }
 

@@ -179,6 +179,37 @@ class SeriesSummary {
   final bool? lastPassed;
 }
 
+/// Une tentative de l'historique « Mes examens ».
+class ExamHistoryItem {
+  const ExamHistoryItem({
+    required this.id,
+    required this.licenseCode,
+    required this.seriesNumber,
+    required this.submitted,
+    required this.startedAt,
+    this.result,
+  });
+
+  factory ExamHistoryItem.fromJson(Map<String, dynamic> json) =>
+      ExamHistoryItem(
+        id: json['id'] as String,
+        licenseCode: json['license_code'] as String,
+        seriesNumber: json['series_number'] as int,
+        submitted: json['status'] == 'submitted',
+        startedAt: DateTime.parse(json['started_at'] as String),
+        result: json['result'] == null
+            ? null
+            : ExamResult.fromJson(json['result'] as Map<String, dynamic>),
+      );
+
+  final String id;
+  final String licenseCode;
+  final int seriesNumber;
+  final bool submitted;
+  final DateTime startedAt;
+  final ExamResult? result;
+}
+
 enum Outcome { correct, incorrect, unanswered }
 
 class ReviewQuestion {
