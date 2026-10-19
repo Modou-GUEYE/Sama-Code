@@ -3,6 +3,7 @@ import { ArrowLeft, Plus } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Course, CourseCategory, Lesson, License, Status, Translations } from '../api/types'
+import { DeleteButton } from '../components/DeleteButton'
 import { StatusActions } from '../components/StatusActions'
 import { cleanTranslations, TranslationFields } from '../components/TranslationFields'
 import { Alert, Field, Loading, PageHead, StatusBadge, useAction, useLoad } from '../components/ui'
@@ -45,6 +46,11 @@ export function CourseEditor() {
   async function changeStatus(to: Status) {
     const c = await action.run(() => api.post<Course>(`/admin/courses/${id}/status`, { status: to }), 'Statut mis à jour.')
     if (c) setData(c)
+  }
+
+  async function remove() {
+    const ok = await action.run(() => api.del(`/admin/courses/${id}`).then(() => true))
+    if (ok) navigate('/courses', { replace: true })
   }
 
   async function addLesson() {
@@ -101,6 +107,8 @@ export function CourseEditor() {
               Enregistrer
             </button>
             <StatusActions status={course.status} busy={action.busy} onChange={(to) => void changeStatus(to)} />
+            <span style={{ flex: 1 }} />
+            <DeleteButton what="ce cours et toutes ses leçons" busy={action.busy} onConfirm={() => void remove()} />
           </div>
         </div>
 

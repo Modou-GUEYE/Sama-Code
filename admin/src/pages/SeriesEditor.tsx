@@ -3,6 +3,7 @@ import { ArrowDown, ArrowLeft, ArrowUp, Check, Plus, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { QuestionSummary, SeriesDetail, SeriesQuestion, Status } from '../api/types'
+import { DeleteButton } from '../components/DeleteButton'
 import { StatusActions } from '../components/StatusActions'
 import { Alert, Loading, PageHead, StatusBadge, useAction, useLoad } from '../components/ui'
 
@@ -51,6 +52,11 @@ export function SeriesEditor() {
     update(next)
   }
 
+  async function remove() {
+    const ok = await action.run(() => api.del(`/admin/exam-series/${id}`).then(() => true))
+    if (ok) navigate('/series', { replace: true })
+  }
+
   async function saveOrder() {
     const d = await action.run(
       () => api.put<SeriesDetail>(`/admin/exam-series/${id}/questions`, { question_ids: items.map((q) => q.question_id) }),
@@ -77,6 +83,11 @@ export function SeriesEditor() {
         actions={
           <>
             <StatusBadge status={series.status} />
+            <DeleteButton
+              what={`la série ${series.series_number} du permis ${series.license_code}`}
+              busy={action.busy}
+              onConfirm={() => void remove()}
+            />
             <button className="btn ghost" onClick={() => navigate('/series')}>
               <ArrowLeft size={16} /> Retour
             </button>

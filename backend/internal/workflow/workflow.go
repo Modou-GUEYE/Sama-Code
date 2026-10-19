@@ -61,3 +61,18 @@ func Check(from, to string, p httpx.Principal) error {
 	}
 	return nil
 }
+
+var ErrDeleteForbidden = httpx.NewError(http.StatusForbidden, "forbidden_delete",
+	"Seul un validateur ou un administrateur peut supprimer un contenu qui n'est plus en brouillon.")
+
+// CheckDelete : un brouillon peut être supprimé par tout rôle de contenu ; au-delà
+// (soumis, publié, archivé), seulement par un validateur ou un administrateur.
+func CheckDelete(status string, p httpx.Principal) error {
+	if status == Draft && slices.ContainsFunc(ContentRoles, p.HasRole) {
+		return nil
+	}
+	if p.HasRole(RoleValidator) || p.HasRole(RoleAdmin) {
+		return nil
+	}
+	return ErrDeleteForbidden
+}

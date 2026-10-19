@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Block, Lang, Lesson, Status, Translations } from '../api/types'
 import { MediaField } from '../components/MediaField'
+import { DeleteButton } from '../components/DeleteButton'
 import { StatusActions } from '../components/StatusActions'
 import { cleanTranslations, TranslationFields } from '../components/TranslationFields'
 import { Alert, Loading, PageHead, StatusBadge, Tabs, useAction, useLoad } from '../components/ui'
@@ -57,6 +58,11 @@ export function LessonEditor() {
       return api.put<Lesson>(`/admin/lessons/${id}/contents`, body)
     }, 'Leçon enregistrée.')
     if (ok) setData(ok)
+  }
+
+  async function remove() {
+    const ok = await action.run(() => api.del(`/admin/lessons/${id}`).then(() => true))
+    if (ok) navigate(`/courses/${lesson!.course_id}`, { replace: true })
   }
 
   async function changeStatus(to: Status) {
@@ -156,6 +162,8 @@ export function LessonEditor() {
             Enregistrer
           </button>
           <StatusActions status={lesson.status} busy={action.busy} onChange={(to) => void changeStatus(to)} />
+          <span style={{ flex: 1 }} />
+          <DeleteButton what="cette leçon" busy={action.busy} onConfirm={() => void remove()} />
         </div>
       </div>
     </>

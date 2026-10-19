@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Lang, Option, Question, QuestionContent, Status } from '../api/types'
 import { MediaField } from '../components/MediaField'
+import { DeleteButton } from '../components/DeleteButton'
 import { StatusActions } from '../components/StatusActions'
 import { Alert, Field, Loading, PageHead, StatusBadge, Tabs, useAction } from '../components/ui'
 
@@ -114,6 +115,11 @@ export function QuestionEditor() {
   async function changeStatus(to: Status) {
     const q = await save.run(() => api.post<Question>(`/admin/questions/${id}/status`, { status: to }), 'Statut mis à jour.')
     if (q) apply(q)
+  }
+
+  async function remove() {
+    const ok = await save.run(() => api.del(`/admin/questions/${id}`).then(() => true))
+    if (ok) navigate('/questions', { replace: true })
   }
 
   const correctCount = draft.options.filter((o) => o.is_correct).length
@@ -255,6 +261,12 @@ export function QuestionEditor() {
           {meta && !isNew && <StatusActions status={meta.status} busy={save.busy} onChange={(to) => void changeStatus(to)} />}
           {meta?.status === 'published' && (
             <span className="muted small">Modifier une question publiée la repasse en brouillon (nouvelle version).</span>
+          )}
+          {!isNew && (
+            <>
+              <span style={{ flex: 1 }} />
+              <DeleteButton what="cette question" busy={save.busy} onConfirm={() => void remove()} />
+            </>
           )}
         </div>
       </div>

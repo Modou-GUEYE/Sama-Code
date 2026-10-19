@@ -351,3 +351,44 @@ func (s *Service) snapshot(ctx context.Context, tx pgx.Tx, p httpx.Principal, id
 	}
 	return snap.Version, nil
 }
+
+var errSeriesTaken = httpx.NewError(http.StatusConflict, "series_has_sessions",
+	"Des candidats ont déjà passé cette série : archivez-la plutôt, pour garder leur historique.")
+
+// Delete supprime une série (et ses versions publiées) tant qu'aucun candidat ne l'a passée.
+func (s *Service) Delete(ctx context.Context, p httpx.Principal, id string) error {
+	return database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		var status, license string
+		var number int
+		err := tx.QueryRow(ctx,
+			`SELECT s.status, lc.code, s.series_number FROM exam_series s
+			   JOIN license_categories lc ON lc.id = s.license_category_id
+			  WHERE s.id = $1 FOR UPDATE OF s`, id).Scan(&status, &license, &number)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if err := workflow.CheckDelete(status, p); err != nil {
+			return err
+		}
+		var taken bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM exam_sessions WHERE series_id = $1)`, id).Scan(&taken); err != nil {
+			return err
+		}
+		if taken {
+			return errSeriesTaken
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM exam_series_snapshots WHERE series_id = $1`, id); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM exam_series WHERE id = $1`, id); err != nil {
+			return err
+		}
+		return audit.Log(ctx, tx, audit.Entry{
+			ActorUserID: &p.UserID, Action: "series.deleted", EntityType: "exam_series", EntityID: &id,
+			Metadata: map[string]any{"license": license, "series_number": number, "status": status},
+		})
+	})
+}

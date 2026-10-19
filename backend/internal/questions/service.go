@@ -320,3 +320,51 @@ func nilIfBlank(s *string) *string {
 	t := strings.TrimSpace(*s)
 	return &t
 }
+
+var (
+	errQuestionInSeries = httpx.NewError(http.StatusConflict, "question_in_series", "Cette question fait partie d'une série : retirez-la d'abord de la série.")
+	errQuestionAnswered = httpx.NewError(http.StatusConflict, "question_answered", "Des candidats ont déjà répondu à cette question : archivez-la plutôt, pour garder leur historique.")
+)
+
+// Delete supprime définitivement une question qui n'est dans aucune série et à
+// laquelle aucun candidat n'a répondu (sinon l'historique des examens serait cassé).
+func (s *Service) Delete(ctx context.Context, p httpx.Principal, id string) error {
+	return database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		var status, label string
+		err := tx.QueryRow(ctx,
+			`SELECT q.status, COALESCE(c.text_content, '') FROM questions q
+			   LEFT JOIN question_contents c ON c.question_id = q.id AND c.language_code = 'fr'
+			  WHERE q.id = $1 FOR UPDATE OF q`, id).Scan(&status, &label)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if err := workflow.CheckDelete(status, p); err != nil {
+			return err
+		}
+		var inSeries, answered bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM series_questions WHERE question_id = $1),
+			        EXISTS (SELECT 1 FROM candidate_answers WHERE question_id = $1)`, id).Scan(&inSeries, &answered); err != nil {
+			return err
+		}
+		switch {
+		case inSeries:
+			return errQuestionInSeries
+		case answered:
+			return errQuestionAnswered
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM questions WHERE id = $1`, id); err != nil {
+			if database.IsForeignKeyViolation(err) {
+				return errQuestionAnswered
+			}
+			return err
+		}
+		return audit.Log(ctx, tx, audit.Entry{
+			ActorUserID: &p.UserID, Action: "question.deleted", EntityType: "question", EntityID: &id,
+			Metadata: map[string]any{"status": status, "text_fr": label},
+		})
+	})
+}

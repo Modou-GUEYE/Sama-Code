@@ -118,6 +118,10 @@ func (h *AdminHandler) Routes(r chi.Router) {
 	r.Put("/lessons/{id}", httpx.Handle(h.updateLesson))
 	r.Put("/lessons/{id}/contents", httpx.Handle(h.setLessonContents))
 	r.Post("/lessons/{id}/status", httpx.Handle(h.lessonStatus))
+
+	r.Delete("/course-categories/{id}", httpx.Handle(h.deleteCategory))
+	r.Delete("/courses/{id}", httpx.Handle(h.deleteCourse))
+	r.Delete("/lessons/{id}", httpx.Handle(h.deleteLesson))
 }
 
 // ---------------------------------------------------------------------------
@@ -744,4 +748,99 @@ func mapErr(err error) error {
 		return errBadReference
 	}
 	return err
+}
+
+// ---------------------------------------------------------------------------
+// Suppression
+// ---------------------------------------------------------------------------
+
+var errCategoryNotEmpty = httpx.NewError(http.StatusConflict, "category_not_empty",
+	"Ce thème contient encore des cours : supprimez-les ou déplacez-les d'abord.")
+
+// Un thème n'a pas de cycle de publication : sa suppression est réservée au validateur
+// et à l'administrateur, et refusée tant qu'il contient des cours.
+func (h *AdminHandler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.UUIDParam(r, "id")
+	if err != nil {
+		return err
+	}
+	p := httpx.MustPrincipal(r.Context())
+	if err := workflow.CheckDelete(workflow.Published, p); err != nil {
+		return err
+	}
+	err = database.WithTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		var code string
+		var courses int
+		err := tx.QueryRow(r.Context(),
+			`SELECT code, (SELECT count(*) FROM courses WHERE category_id = c.id) FROM course_categories c WHERE id = $1 FOR UPDATE`,
+			id).Scan(&code, &courses)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if courses > 0 {
+			return errCategoryNotEmpty.With("courses", courses)
+		}
+		if _, err := tx.Exec(r.Context(), `DELETE FROM course_categories WHERE id = $1`, id); err != nil {
+			return err
+		}
+		return audit.Log(r.Context(), tx, audit.Entry{
+			ActorUserID: &p.UserID, Action: "course_category.deleted", EntityType: "course_category", EntityID: &id,
+			Metadata: map[string]any{"code": code},
+		})
+	})
+	if err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// Supprimer un cours supprime ses leçons et leurs blocs (les questions liées perdent
+// seulement leur lien « revoir le cours »).
+func (h *AdminHandler) deleteCourse(w http.ResponseWriter, r *http.Request) error {
+	return h.deleteEntity(w, r, "courses", "course", "course_translations", "course_id")
+}
+
+func (h *AdminHandler) deleteLesson(w http.ResponseWriter, r *http.Request) error {
+	return h.deleteEntity(w, r, "lessons", "lesson", "lesson_translations", "lesson_id")
+}
+
+func (h *AdminHandler) deleteEntity(w http.ResponseWriter, r *http.Request, table, entity, trTable, fk string) error {
+	id, err := httpx.UUIDParam(r, "id")
+	if err != nil {
+		return err
+	}
+	p := httpx.MustPrincipal(r.Context())
+	err = database.WithTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		var status string
+		err := tx.QueryRow(r.Context(), `SELECT status FROM `+table+` WHERE id = $1 FOR UPDATE`, id).Scan(&status)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if err := workflow.CheckDelete(status, p); err != nil {
+			return err
+		}
+		tr, err := loadTranslations(r.Context(), tx, trTable, fk, "title", id)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(r.Context(), `DELETE FROM `+table+` WHERE id = $1`, id); err != nil {
+			return err
+		}
+		return audit.Log(r.Context(), tx, audit.Entry{
+			ActorUserID: &p.UserID, Action: entity + ".deleted", EntityType: entity, EntityID: &id,
+			Metadata: map[string]any{"status": status, "title_fr": tr["fr"].Title},
+		})
+	})
+	if err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
 }

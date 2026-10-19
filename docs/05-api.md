@@ -113,6 +113,12 @@ complet en **fr et en wo**.
 | PUT | `/admin/lessons/{id}/contents` | Blocs `{fr: [{content_type, text, media_id}], wo: […]}` |
 | POST | `/admin/lessons/{id}/status` | Cycle de publication |
 
+**Suppression définitive** (`DELETE`) : `/admin/questions/{id}`, `/admin/exam-series/{id}`,
+`/admin/course-categories/{id}`, `/admin/courses/{id}` (avec ses leçons), `/admin/lessons/{id}`.
+Un brouillon peut être supprimé par un éditeur ; sinon validateur ou admin (thème : validateur ou admin).
+Refusée (409) si elle casserait l'historique : question dans une série ou déjà répondue,
+série déjà passée par un candidat, thème contenant des cours. Il faut alors archiver.
+
 Premier administrateur : `go run ./cmd/grant-role -phone "77 123 45 67" -role admin`
 (le compte doit exister : inscription depuis l'application).
 

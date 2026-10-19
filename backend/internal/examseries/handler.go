@@ -21,6 +21,7 @@ func (h *Handler) AdminRoutes(r chi.Router) {
 	r.Get("/exam-series/{id}", httpx.Handle(h.get))
 	r.Put("/exam-series/{id}/questions", httpx.Handle(h.setQuestions))
 	r.Post("/exam-series/{id}/status", httpx.Handle(h.setStatus))
+	r.Delete("/exam-series/{id}", httpx.Handle(h.delete))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
@@ -97,5 +98,17 @@ func (h *Handler) setStatus(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusOK, d)
+	return nil
+}
+
+func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.UUIDParam(r, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.svc.Delete(r.Context(), httpx.MustPrincipal(r.Context()), id); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

@@ -3,6 +3,7 @@ import { Pencil, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Course, CourseCategory, Translations } from '../api/types'
+import { DeleteButton } from '../components/DeleteButton'
 import { cleanTranslations, TranslationFields } from '../components/TranslationFields'
 import { Alert, Field, Loading, PageHead, StatusBadge, useAction, useLoad } from '../components/ui'
 
@@ -140,6 +141,12 @@ function CategoryForm({
   const [translations, setTranslations] = useState<Translations>(category?.translations ?? {})
   const action = useAction()
 
+  async function remove() {
+    if (!category) return
+    const ok = await action.run(() => api.del(`/admin/course-categories/${category.id}`).then(() => true))
+    if (ok) onDone()
+  }
+
   async function save() {
     const body = {
       code,
@@ -171,6 +178,16 @@ function CategoryForm({
         <button className="btn ghost" onClick={() => onDone()}>
           Annuler
         </button>
+        {category && (
+          <>
+            <span style={{ flex: 1 }} />
+            <DeleteButton
+              what={`le thème « ${category.translations.fr?.title ?? category.code} »`}
+              busy={action.busy}
+              onConfirm={() => void remove()}
+            />
+          </>
+        )}
       </div>
     </div>
   )
