@@ -96,10 +96,11 @@ export function SeriesEditor() {
       />
       <Alert>{action.error}</Alert>
       <Alert kind="success">{action.success}</Alert>
-      {series.status === 'published' && (
+      {/* Prévenir seulement au moment où l'on modifie une série publiée. */}
+      {dirty && series.status === 'published' && (
         <Alert kind="info">
-          Série publiée. Modifier sa composition la repasse en brouillon ; les candidats gardent la version v
-          {series.current_version} jusqu’à la prochaine publication.
+          En enregistrant, la série repassera en brouillon. Les candidats gardent la v{series.current_version} jusqu’à
+          la prochaine publication.
         </Alert>
       )}
 
