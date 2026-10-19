@@ -56,7 +56,7 @@ class ResultView extends StatelessWidget {
                 ),
               ),
               Text(
-                'Permis ${session.licenseCode} — ${s.t('series_n')} ${session.seriesNumber}',
+                s.series('Permis ${session.licenseCode}', session.seriesNumber),
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 17, color: Ink2.muted),
               ),

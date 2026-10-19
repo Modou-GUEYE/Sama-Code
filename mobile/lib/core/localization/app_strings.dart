@@ -10,6 +10,10 @@ class AppStrings {
   String t(String key) =>
       (language == 'wo' ? _wo[key] : null) ?? _fr[key] ?? key;
 
+  /// « Permis B, série 3 ».
+  String series(String license, int number) =>
+      '$license, ${t('series_n').toLowerCase()} $number';
+
   /// Message d'erreur dans la langue de l'utilisateur, à partir du code renvoyé par l'API.
   String error(String code, String serverMessage) {
     final key = 'error_$code';

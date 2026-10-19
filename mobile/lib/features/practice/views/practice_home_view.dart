@@ -209,7 +209,7 @@ class _LicenseSection extends StatelessWidget {
               child: Text(
                 s.t(subtitleKey) == subtitleKey
                     ? license.name
-                    : '${license.name} · ${s.t(subtitleKey)}',
+                    : '${license.name}, ${s.t(subtitleKey).toLowerCase()}',
                 style: const TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w800,

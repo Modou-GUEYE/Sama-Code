@@ -346,7 +346,7 @@ class _ReviewOption extends StatelessWidget {
                 ),
                 if (tags.isNotEmpty)
                   Text(
-                    tags.join(' · '),
+                    tags.join('\n'),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,

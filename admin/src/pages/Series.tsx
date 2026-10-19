@@ -50,8 +50,8 @@ export function Series() {
       <Alert>{licenses.error ?? series.error ?? create.error}</Alert>
       {license && (
         <p className="muted" style={{ marginTop: 0 }}>
-          {license.series_count} séries de {license.questions_per_series} questions · {license.max_faults} fautes
-          autorisées · {license.exam_duration_minutes} minutes
+          {license.series_count} séries de {license.questions_per_series} questions, {license.max_faults} fautes
+          autorisées, {license.exam_duration_minutes} minutes
         </p>
       )}
       <div className="series-grid">
@@ -74,7 +74,7 @@ export function Series() {
                   <>
                     <div className="small muted" style={{ margin: '8px 0 6px' }}>
                       {s.question_count} / {s.questions_per_series} questions
-                      {s.current_version > 0 && ` · v${s.current_version}`}
+                      {s.current_version > 0 && `, version ${s.current_version}`}
                     </div>
                     <div className="progress">
                       <div style={{ width: `${(100 * s.question_count) / s.questions_per_series}%` }} />

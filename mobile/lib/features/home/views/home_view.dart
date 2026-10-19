@@ -563,7 +563,17 @@ class _ResumeBanner extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Permis ${exam.licenseCode} · ${s.t('series_n')} ${exam.seriesNumber} · ${s.t('resume_banner_desc')}',
+                        s.series(
+                          'Permis ${exam.licenseCode}',
+                          exam.seriesNumber,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        s.t('resume_banner_desc'),
                         style: const TextStyle(
                           fontSize: 15,
                           color: Colors.white,

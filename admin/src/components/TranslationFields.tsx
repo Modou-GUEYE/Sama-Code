@@ -23,11 +23,11 @@ export function TranslationFields({
     <div className="grid cols-2">
       {(['fr', 'wo'] as Lang[]).map((lang) => (
         <div key={lang} className="stack">
-          <Field label={`${titleLabel} — ${LABEL[lang]}`}>
+          <Field label={`${titleLabel} (${LABEL[lang]})`}>
             <input className="input" value={value[lang]?.title ?? ''} onChange={(e) => set(lang, { title: e.target.value })} />
           </Field>
           {withDescription && (
-            <Field label={`Description — ${LABEL[lang]}`}>
+            <Field label={`Description (${LABEL[lang]})`}>
               <textarea
                 className="textarea"
                 style={{ minHeight: 60 }}

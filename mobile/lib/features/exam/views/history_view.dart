@@ -164,8 +164,7 @@ class _HistoryCard extends StatelessWidget {
     final faults = r == null
         ? null
         : '${r.faults} ${r.faults > 1 ? s.t('faults') : s.t('fault')}';
-    final title =
-        'Permis ${item.licenseCode} · ${s.t('series_n')} ${item.seriesNumber}';
+    final title = s.series('Permis ${item.licenseCode}', item.seriesNumber);
     final date = _formatDate(item.startedAt.toLocal(), s);
 
     return Semantics(
@@ -201,7 +200,7 @@ class _HistoryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    faults == null ? status : '$status · $faults',
+                    faults == null ? status : '$status, $faults',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,

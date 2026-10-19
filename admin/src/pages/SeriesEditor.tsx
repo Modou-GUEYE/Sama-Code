@@ -76,9 +76,9 @@ export function SeriesEditor() {
   return (
     <>
       <PageHead
-        title={`Permis ${series.license_code} — Série ${series.series_number}`}
+        title={`Permis ${series.license_code}, série ${series.series_number}`}
         subtitle={`${items.length} / ${series.questions_per_series} questions${
-          series.current_version > 0 ? ` · version publiée : v${series.current_version}` : ''
+          series.current_version > 0 ? `, version publiée ${series.current_version}` : ''
         }`}
         actions={
           <>

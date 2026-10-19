@@ -51,7 +51,7 @@ class _SeriesListBody extends StatelessWidget {
       title: vm.license.name,
       subtitle: s.t(subtitleKey) == subtitleKey
           ? s.t('exam_choose_series')
-          : '${s.t(subtitleKey)} · ${s.t('exam_choose_series')}',
+          : '${s.t(subtitleKey)}. ${s.t('exam_choose_series')}',
       children: [
         if (vm.loading && vm.series.isEmpty)
           const Padding(
@@ -190,7 +190,7 @@ Future<void> _openStartSheet(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              '${vm.license.name} — ${s.t('series_n')} ${series.number}',
+              s.series(vm.license.name, series.number),
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,

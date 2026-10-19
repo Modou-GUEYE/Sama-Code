@@ -282,7 +282,7 @@ class _PracticeBody extends StatelessWidget {
       if (check.correct.contains(id)) s.t('good_answer'),
       if (selected.contains(id)) s.t('your_answer'),
     ];
-    return labels.isEmpty ? null : labels.join(' · ');
+    return labels.isEmpty ? null : labels.join('\n');
   }
 }
 
