@@ -11,8 +11,8 @@ import '../../../shared/widgets/animated_road.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 
-/// À propos, dans le style de l'écran de bienvenue : logo, trois icônes (lire,
-/// écouter, voir), route animée, contacts en gros boutons, puis éditeur et version.
+/// À propos, dans le style de l'écran de bienvenue : logo, présentation, trois
+/// icônes (lire, écouter, voir), route animée, contacts en gros boutons, puis éditeur et version.
 /// Tient dans l'écran ; défile seulement sur un petit écran ou en grande police.
 class AboutView extends StatelessWidget {
   const AboutView({super.key});
@@ -51,12 +51,18 @@ class AboutView extends StatelessWidget {
                               ),
                             ),
                             const Spacer(),
-                            Semantics(
-                              label: s.t('about_mission'),
-                              excludeSemantics: true,
-                              child: const Center(child: AppLogo(size: 200)),
+                            const Center(child: AppLogo(size: 170)),
+                            const SizedBox(height: 14),
+                            Text(
+                              s.t('about_mission'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                height: 1.4,
+                                color: Ink2.strong,
+                              ),
                             ),
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 24),
                             Row(
                               children: [
                                 _Feature(
@@ -81,7 +87,7 @@ class AboutView extends StatelessWidget {
                             ),
                             const Spacer(),
                             // La route passe entre les icônes et les contacts.
-                            const SizedBox(height: 170, child: AnimatedRoad()),
+                            const SizedBox(height: 130, child: AnimatedRoad()),
                             const SizedBox(height: 24),
                             Row(
                               children: [

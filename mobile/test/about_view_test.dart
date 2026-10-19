@@ -52,13 +52,14 @@ void main() {
     expect(find.text('E-mail'), findsOneWidget);
     expect(find.text('Appeler'), findsOneWidget);
     expect(find.text('WhatsApp'), findsOneWidget);
+    expect(
+      find.textContaining('vous aide à préparer l’examen'),
+      findsOneWidget,
+    );
     expect(find.text('Lire'), findsOneWidget);
     expect(find.text('Écouter'), findsOneWidget);
     expect(find.text('Voir'), findsOneWidget);
-    expect(
-      find.bySemanticsLabel('WhatsApp : 77 353 13 77'),
-      findsOneWidget,
-    );
+    expect(find.bySemanticsLabel('WhatsApp : 77 353 13 77'), findsOneWidget);
     expect(
       find.text('Une application éditée par Sama Code. Version 1.0.0'),
       findsOneWidget,
