@@ -7,9 +7,9 @@ lettrées comme illettrées (français et wolof, texte et audio).
 
 | Dossier | Contenu | État |
 |---|---|---|
-| [backend/](backend/) | API REST Go + migrations PostgreSQL | Phase 2 : socle et authentification |
+| [backend/](backend/) | API REST Go + migrations PostgreSQL | Authentification, administration des contenus |
 | [mobile/](mobile/) | Application Flutter (MVVM) | Phase 5 |
-| [admin/](admin/) | Administration React + TypeScript | Phase 3 |
+| [admin/](admin/) | Administration React + TypeScript | Questions, séries, cours, comptes |
 | [docs/](docs/) | Cadrage fonctionnel et technique | À jour |
 
 Cadrage fonctionnel et technique complet : [docs/](docs/).
@@ -45,7 +45,7 @@ Contrat d'API : [backend/api/openapi.yaml](backend/api/openapi.yaml).
 
 ## Relancer le projet après une fermeture
 
-PostgreSQL démarre seul à l'ouverture de session (`brew services`). Ensuite, deux terminaux :
+PostgreSQL démarre seul à l'ouverture de session (`brew services`). Ensuite, trois terminaux :
 
 ```bash
 # Terminal 1 — API (laisser ouvert)
@@ -58,6 +58,10 @@ adb devices                         # le téléphone doit apparaître en « devi
 adb reverse tcp:8080 tcp:8080       # le téléphone joint l'API par le câble
 cd "/Users/mac/Desktop/SAMA CODE/mobile"
 flutter run --dart-define=API_BASE_URL=http://localhost:8080/api/v1
+
+# Terminal 3 — administration web (http://localhost:5173)
+cd "/Users/mac/Desktop/SAMA CODE/admin"
+npm run dev
 ```
 
 Dans `flutter run` : `r` = rechargement à chaud, `R` = redémarrage, `q` = quitter.
