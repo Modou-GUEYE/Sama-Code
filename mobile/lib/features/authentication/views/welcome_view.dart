@@ -83,21 +83,12 @@ class _WelcomeViewState extends State<WelcomeView>
                           begin: const Offset(0, 0.06),
                           end: Offset.zero,
                         ).animate(fade),
-                        child: Column(
-                          children: [
-                            const AppLogo(size: 240),
-                            const SizedBox(height: 4),
-                            // Le logo porte déjà le nom : on ne le répète pas.
-                            Text(
-                              s.t('welcome'),
-                              style: const TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.4,
-                                color: AppColors.greenDark,
-                              ),
-                            ),
-                          ],
+                        // Le logo porte le nom et le slogan : pas de titre écrit.
+                        // « Bienvenue sur Sama Code » reste lu par le lecteur d'écran.
+                        child: Semantics(
+                          label: s.t('welcome'),
+                          excludeSemantics: true,
+                          child: const AppLogo(size: 280),
                         ),
                       ),
                     ),

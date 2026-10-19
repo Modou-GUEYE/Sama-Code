@@ -29,7 +29,7 @@ class AppStrings {
     'mode_audio': 'Écouter',
     'mode_audio_desc': "J'écoute les cours et les questions",
     'continue': 'Continuer',
-    'welcome': 'Bienvenue',
+    'welcome': 'Bienvenue sur Sama Code',
     'feat_courses': 'Cours à lire ou à écouter',
     'feat_practice': 'Entraînement avec corrections',
     'feat_exam': 'Examens blancs permis B et C',
