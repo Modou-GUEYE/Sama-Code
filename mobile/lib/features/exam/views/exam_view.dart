@@ -512,21 +512,32 @@ Future<void> _openGrid(BuildContext context, ExamViewModel vm, AppStrings s) {
               style: const TextStyle(fontSize: 15, color: Ink2.muted),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (var i = 0; i < vm.questions.length; i++)
-                  _GridCell(
-                    number: i + 1,
-                    answered: vm.isAnswered(vm.questions[i]),
-                    current: i == vm.index,
-                    onTap: () {
-                      vm.goTo(i);
-                      Navigator.of(sheet).pop();
-                    },
-                  ),
-              ],
+            // Cases de 52 px minimum, élargies pour remplir exactement la largeur.
+            LayoutBuilder(
+              builder: (context, box) {
+                const minCell = 52.0, gap = 10.0;
+                final columns = ((box.maxWidth + gap) / (minCell + gap))
+                    .floor()
+                    .clamp(1, 10);
+                final cell = (box.maxWidth - gap * (columns - 1)) / columns;
+                return Wrap(
+                  spacing: gap,
+                  runSpacing: gap,
+                  children: [
+                    for (var i = 0; i < vm.questions.length; i++)
+                      _GridCell(
+                        number: i + 1,
+                        size: cell,
+                        answered: vm.isAnswered(vm.questions[i]),
+                        current: i == vm.index,
+                        onTap: () {
+                          vm.goTo(i);
+                          Navigator.of(sheet).pop();
+                        },
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -538,12 +549,14 @@ Future<void> _openGrid(BuildContext context, ExamViewModel vm, AppStrings s) {
 class _GridCell extends StatelessWidget {
   const _GridCell({
     required this.number,
+    required this.size,
     required this.answered,
     required this.current,
     required this.onTap,
   });
 
   final int number;
+  final double size;
   final bool answered;
   final bool current;
   final VoidCallback onTap;
@@ -562,7 +575,7 @@ class _GridCell extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: SizedBox(
-          width: 52,
+          width: size,
           height: 52,
           child: Stack(
             alignment: Alignment.center,
