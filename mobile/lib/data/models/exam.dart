@@ -204,3 +204,89 @@ class ReviewQuestion {
   final Outcome outcome;
   final Map<String, LocalizedContent> explanations;
 }
+
+// ---------------------------------------------------------------------------
+// Entraînement
+// ---------------------------------------------------------------------------
+
+class PracticeSeries {
+  const PracticeSeries({
+    required this.id,
+    required this.number,
+    required this.questionCount,
+    required this.practiced,
+    required this.mastered,
+  });
+
+  factory PracticeSeries.fromJson(Map<String, dynamic> json) => PracticeSeries(
+    id: json['id'] as String,
+    number: json['series_number'] as int,
+    questionCount: json['question_count'] as int,
+    practiced: json['practiced'] as int,
+    mastered: json['mastered'] as int,
+  );
+
+  final String id;
+  final int number;
+  final int questionCount;
+  final int practiced;
+  final int mastered;
+}
+
+class PracticeLicense {
+  const PracticeLicense({
+    required this.id,
+    required this.code,
+    required this.name,
+    required this.series,
+    required this.mistakes,
+  });
+
+  factory PracticeLicense.fromJson(Map<String, dynamic> json) =>
+      PracticeLicense(
+        id: json['id'] as String,
+        code: json['code'] as String,
+        name: json['name'] as String,
+        series: (json['series'] as List)
+            .map((s) => PracticeSeries.fromJson(s as Map<String, dynamic>))
+            .toList(),
+        mistakes: json['mistakes'] as int,
+      );
+
+  final String id;
+  final String code;
+  final String name;
+  final List<PracticeSeries> series;
+  final int mistakes;
+}
+
+/// Question d'entraînement et série dont elle vient.
+class PracticeItem {
+  const PracticeItem({required this.seriesId, required this.question});
+
+  factory PracticeItem.fromJson(Map<String, dynamic> json) => PracticeItem(
+    seriesId: json['series_id'] as String,
+    question: ExamQuestion.fromJson(json['question'] as Map<String, dynamic>),
+  );
+
+  final String seriesId;
+  final ExamQuestion question;
+}
+
+class PracticeCheck {
+  const PracticeCheck({
+    required this.outcome,
+    required this.correct,
+    required this.explanations,
+  });
+
+  factory PracticeCheck.fromJson(Map<String, dynamic> json) => PracticeCheck(
+    outcome: Outcome.values.byName(json['outcome'] as String),
+    correct: (json['correct_option_ids'] as List).cast<String>().toSet(),
+    explanations: _contents(json['explanations']),
+  );
+
+  final Outcome outcome;
+  final Set<String> correct;
+  final Map<String, LocalizedContent> explanations;
+}

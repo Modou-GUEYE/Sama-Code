@@ -8,6 +8,7 @@ import '../../../core/session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/exam.dart';
 import '../../../data/repositories/exam_repository.dart';
+import '../../../shared/widgets/answer_option.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/auth_scaffold.dart';
 import '../../../shared/widgets/feedback.dart';
@@ -179,8 +180,8 @@ class _ExamBodyState extends State<_ExamBody> {
                         ),
                         const SizedBox(height: 10),
                         for (final o in q.options) ...[
-                          _OptionTile(
-                            option: o,
+                          AnswerOption(
+                            code: o.code,
                             content: pick(o.contents, session.language),
                             selected: vm.isSelected(o),
                             multiple: q.multiple,
@@ -311,120 +312,6 @@ class _TimerPill extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OptionTile extends StatelessWidget {
-  const _OptionTile({
-    required this.option,
-    required this.content,
-    required this.selected,
-    required this.multiple,
-    required this.onTap,
-  });
-
-  final ExamOption option;
-  final LocalizedContent content;
-  final bool selected;
-  final bool multiple;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final mark = multiple
-        ? (selected
-              ? Icons.check_box_rounded
-              : Icons.check_box_outline_blank_rounded)
-        : (selected ? Icons.check_circle_rounded : Icons.circle_outlined);
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: '${option.code}. ${content.text}',
-      excludeSemantics: true,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE3F2E9) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: selected
-              ? const []
-              : const [
-                  BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 16,
-                    offset: Offset(0, 6),
-                  ),
-                ],
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 46,
-                    height: 46,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: selected ? AppColors.green : AppColors.background,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      option.code,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: selected ? Colors.white : Ink2.strong,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (content.imageUrl != null) ...[
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              AppConfig.mediaUrl(content.imageUrl!),
-                              height: 90,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                        ],
-                        Text(
-                          content.text,
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: Ink2.strong,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    mark,
-                    size: 30,
-                    color: selected ? AppColors.green : const Color(0xFFC9CEC6),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );

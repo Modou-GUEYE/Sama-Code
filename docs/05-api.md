@@ -40,6 +40,15 @@ Toutes ces routes exigent un compte connecté (D19).
 | GET | `/exam-series/{id}/questions` | Questions (entraînement), **sans** bonnes réponses |
 | POST | `/exam-series/{id}/questions/{questionId}/check` | Entraînement : valider une réponse, renvoie correction + explication de **cette** question uniquement |
 
+## Entraînement (implémenté)
+
+| Méthode | Endpoint | Rôle |
+|---|---|---|
+| GET | `/practice` | Permis, séries publiées, progression (questions travaillées / réussies) et nombre d'erreurs à revoir |
+| GET | `/practice/series/{id}/questions` | Questions de la série, dans l'ordre, **sans** bonnes réponses |
+| GET | `/practice/license-categories/{id}/mistakes` | Questions dont la dernière réponse d'entraînement est fausse |
+| POST | `/practice/series/{id}/questions/{questionId}/check` | Corriger une réponse `{option_ids}` : résultat, bonnes réponses, explications ; enregistrée dans `practice_answers` |
+
 ## Sessions d'examen
 
 | Méthode | Endpoint | Rôle |

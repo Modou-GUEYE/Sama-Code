@@ -10,6 +10,7 @@ import '../../../data/repositories/exam_repository.dart';
 import '../../../data/repositories/license_repository.dart';
 import '../../exam/views/exam_view.dart';
 import '../../exam/views/series_list_view.dart';
+import '../../practice/views/practice_home_view.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../notifications/views/notifications_view.dart';
@@ -89,7 +90,7 @@ class _HomeBody extends StatelessWidget {
                       child: _FeatureTile(
                         icon: Icons.menu_book_rounded,
                         label: s.t('courses'),
-                        badge: s.t('soon'),
+                        badge: s.t('practice_subtitle'),
                         color: AppColors.green,
                         onTap: () => _soon(context, s),
                       ),
@@ -99,9 +100,16 @@ class _HomeBody extends StatelessWidget {
                       child: _FeatureTile(
                         icon: Icons.quiz_rounded,
                         label: s.t('practice'),
-                        badge: s.t('soon'),
+                        badge: s.t('practice_badge'),
                         color: AppColors.orange,
-                        onTap: () => _soon(context, s),
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const PracticeHomeView(),
+                            ),
+                          );
+                          await vm.load();
+                        },
                       ),
                     ),
                   ],

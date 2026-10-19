@@ -25,6 +25,7 @@ func (h *Handler) Routes(r chi.Router) {
 	r.Post("/exam-sessions/{id}/submit", httpx.Handle(h.submit))
 	r.Get("/exam-sessions/{id}/result", httpx.Handle(h.result))
 	r.Get("/exam-sessions/{id}/review", httpx.Handle(h.review))
+	h.practiceRoutes(r)
 }
 
 func userID(r *http.Request) string { return httpx.MustPrincipal(r.Context()).UserID }
