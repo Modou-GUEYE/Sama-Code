@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/exam.dart';
 import '../../../data/models/license_category.dart';
 import '../../../data/repositories/exam_repository.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/auth_scaffold.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
@@ -172,10 +173,8 @@ Future<void> _openStartSheet(
   SeriesSummary series,
   AppStrings s,
 ) {
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
-    showDragHandle: true,
-    backgroundColor: Colors.white,
     builder: (sheet) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -271,10 +270,8 @@ Future<void> _start(
 
 /// true = reprendre l'examen en cours ; false = l'abandonner et commencer celui-ci.
 Future<bool?> _askResume(BuildContext context, AppStrings s) {
-  return showModalBottomSheet<bool>(
+  return showAppSheet<bool>(
     context: context,
-    showDragHandle: true,
-    backgroundColor: Colors.white,
     builder: (sheet) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),

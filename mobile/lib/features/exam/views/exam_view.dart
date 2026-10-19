@@ -8,6 +8,7 @@ import '../../../core/session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/exam.dart';
 import '../../../data/repositories/exam_repository.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/auth_scaffold.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/listen_button.dart';
@@ -489,10 +490,8 @@ class _BottomBar extends StatelessWidget {
 }
 
 Future<void> _openGrid(BuildContext context, ExamViewModel vm, AppStrings s) {
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
-    showDragHandle: true,
-    backgroundColor: Colors.white,
     builder: (sheet) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -600,10 +599,8 @@ Future<void> _confirmFinish(
   AppStrings s,
 ) async {
   final unanswered = vm.unansweredCount;
-  final ok = await showModalBottomSheet<bool>(
+  final ok = await showAppSheet<bool>(
     context: context,
-    showDragHandle: true,
-    backgroundColor: Colors.white,
     builder: (sheet) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -662,10 +659,8 @@ Future<void> _confirmFinish(
 }
 
 Future<void> _confirmQuit(BuildContext context, AppStrings s) async {
-  final quit = await showModalBottomSheet<bool>(
+  final quit = await showAppSheet<bool>(
     context: context,
-    showDragHandle: true,
-    backgroundColor: Colors.white,
     builder: (sheet) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
