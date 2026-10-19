@@ -173,6 +173,12 @@ class AppStrings {
     'cancel': 'Annuler',
     'save': 'Enregistrer',
     'about': 'À propos',
+    'about_mission':
+        'Sama Code vous aide à préparer l’examen du Code de la route au Sénégal, que vous sachiez lire ou non.',
+    'about_read': 'Les textes sont en français.',
+    'about_listen': 'Chaque cours et chaque question s’écoute en français ou en wolof.',
+    'about_images': 'Des illustrations accompagnent les leçons et les questions.',
+    'licenses': 'Licences des logiciels',
     'notifications': 'Notifications',
     'no_notifications': 'Aucune notification pour le moment.',
     'version': 'Version',

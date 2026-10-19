@@ -10,6 +10,7 @@ import '../../authentication/viewmodels/auth_flow_viewmodel.dart';
 import '../../authentication/views/auth_navigation.dart';
 import '../../authentication/views/otp_view.dart';
 import '../../../shared/widgets/surfaces.dart';
+import 'about_view.dart';
 
 const _ink = Ink2.strong;
 const _muted = Ink2.muted;
@@ -77,7 +78,9 @@ class SettingsView extends StatelessWidget {
                   _MenuRow(
                     icon: Icons.info_outline_rounded,
                     label: s.t('about'),
-                    onTap: () => _showAbout(context, s),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AboutView()),
+                    ),
                   ),
                 ],
               ),
@@ -195,25 +198,6 @@ class SettingsView extends StatelessWidget {
         SnackBar(content: Text(describeError(session.strings, vm.error!))),
       );
     }
-  }
-
-  void _showAbout(BuildContext context, AppStrings s) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset('assets/images/logo.png', width: 160, height: 160),
-            const SizedBox(height: 8),
-            _AppVersion(label: s.t('version')),
-          ],
-        ),
-      ),
-    );
   }
 }
 
