@@ -76,23 +76,27 @@ func (s *Service) publishedSnapshots(ctx context.Context, licenseID string) ([]*
 	return out, nil
 }
 
-// lastPracticeResults : dernière réponse d'entraînement du candidat par question (juste ou non).
-func (s *Service) lastPracticeResults(ctx context.Context, userID string) (map[string]bool, error) {
+// practiceKey : une question dans une série (la progression est comptée par série).
+type practiceKey struct{ seriesID, questionID string }
+
+// lastPracticeResults : dernière réponse d'entraînement du candidat, par question et par série.
+func (s *Service) lastPracticeResults(ctx context.Context, userID string) (map[practiceKey]bool, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT DISTINCT ON (question_id) question_id, is_correct FROM practice_answers
-		  WHERE user_id = $1 ORDER BY question_id, answered_at DESC`, userID)
+		`SELECT DISTINCT ON (series_id, question_id) series_id, question_id, is_correct FROM practice_answers
+		  WHERE user_id = $1 AND series_id IS NOT NULL
+		  ORDER BY series_id, question_id, answered_at DESC`, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := map[string]bool{}
+	out := map[practiceKey]bool{}
 	for rows.Next() {
-		var id string
+		var k practiceKey
 		var ok bool
-		if err := rows.Scan(&id, &ok); err != nil {
+		if err := rows.Scan(&k.seriesID, &k.questionID, &ok); err != nil {
 			return nil, err
 		}
-		out[id] = ok
+		out[k] = ok
 	}
 	return out, rows.Err()
 }
@@ -128,7 +132,7 @@ func (s *Service) PracticeSummary(ctx context.Context, userID string) ([]Practic
 			}
 			ps := PracticeSeries{ID: snap.SeriesID, SeriesNumber: snap.SeriesNumber, QuestionCount: len(snap.Questions)}
 			for _, q := range snap.Questions {
-				ok, tried := last[q.QuestionID]
+				ok, tried := last[practiceKey{snap.SeriesID, q.QuestionID}]
 				if !tried {
 					continue
 				}
@@ -159,7 +163,7 @@ func (s *Service) PracticeQuestions(ctx context.Context, seriesID string) ([]Pra
 	return out, nil
 }
 
-// PracticeMistakes : questions dont la dernière réponse d'entraînement est fausse.
+// PracticeMistakes : questions dont la dernière réponse d'entraînement, dans leur série, est fausse.
 func (s *Service) PracticeMistakes(ctx context.Context, userID, licenseID string) ([]PracticeItem, error) {
 	if !httpx.IsUUID(licenseID) {
 		return nil, httpx.ErrNotFound
@@ -176,7 +180,8 @@ func (s *Service) PracticeMistakes(ctx context.Context, userID, licenseID string
 	seen := map[string]bool{}
 	for _, snap := range snaps {
 		for _, q := range snap.Questions {
-			if ok, tried := last[q.QuestionID]; tried && !ok && !seen[q.QuestionID] {
+			// Une question ratée dans deux séries n'apparaît qu'une fois.
+			if ok, tried := last[practiceKey{snap.SeriesID, q.QuestionID}]; tried && !ok && !seen[q.QuestionID] {
 				seen[q.QuestionID] = true
 				out = append(out, PracticeItem{SeriesID: snap.SeriesID, Question: candidateQuestion(q)})
 			}
@@ -215,8 +220,8 @@ func (s *Service) PracticeCheck(ctx context.Context, userID, seriesID, questionI
 	r := scoring.Evaluate(sq, map[string][]string{questionID: optionIDs}, 0)
 	outcome := r.Outcomes[questionID]
 	if _, err := s.db.Exec(ctx,
-		`INSERT INTO practice_answers (user_id, question_id, is_correct, answered_at) VALUES ($1, $2, $3, $4)`,
-		userID, questionID, outcome == scoring.Correct, s.now()); err != nil {
+		`INSERT INTO practice_answers (user_id, series_id, question_id, is_correct, answered_at) VALUES ($1, $2, $3, $4, $5)`,
+		userID, seriesID, questionID, outcome == scoring.Correct, s.now()); err != nil {
 		return PracticeCheck{}, err
 	}
 	correct := sq[0].CorrectOptionIDs

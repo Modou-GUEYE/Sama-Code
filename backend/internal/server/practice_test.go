@@ -71,4 +71,34 @@ func TestPractice(t *testing.T) {
 	if len(body["items"].([]any)) != 0 {
 		t.Fatalf("erreurs après correction = %v", body["items"])
 	}
+
+	// Progression par série : une série qui partage les mêmes questions repart de zéro.
+	editor, validator := e.user("editor"), e.user("validator")
+	status, body = editor.do("POST", "/api/v1/admin/exam-series", map[string]any{"license_category_id": licenseC, "series_number": 4})
+	mustStatus(t, status, body, http.StatusCreated, "seconde série")
+	shared := body["id"].(string)
+	editor.do("PUT", "/api/v1/admin/exam-series/"+shared+"/questions", map[string]any{"question_ids": order})
+	editor.do("POST", "/api/v1/admin/exam-series/"+shared+"/status", map[string]string{"status": "in_review"})
+	status, body = validator.do("POST", "/api/v1/admin/exam-series/"+shared+"/status", map[string]string{"status": "published"})
+	mustStatus(t, status, body, http.StatusOK, "publication seconde série")
+
+	_, body = candidate.do("GET", "/api/v1/practice", nil)
+	for _, l := range body["items"].([]any) {
+		if l.(map[string]any)["code"] != "C" {
+			continue
+		}
+		for _, ser := range l.(map[string]any)["series"].([]any) {
+			m := ser.(map[string]any)
+			switch m["id"] {
+			case seriesID:
+				if m["practiced"] != 2.0 || m["mastered"] != 2.0 {
+					t.Errorf("série d'origine = %v", m)
+				}
+			case shared:
+				if m["practiced"] != 0.0 || m["mastered"] != 0.0 {
+					t.Errorf("la série qui partage les questions ne doit pas hériter de la progression : %v", m)
+				}
+			}
+		}
+	}
 }
