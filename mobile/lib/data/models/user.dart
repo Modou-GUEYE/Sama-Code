@@ -6,6 +6,7 @@ class User {
     required this.preferredLanguage,
     required this.learningMode,
     required this.roles,
+    this.termsAccepted = true,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -15,6 +16,7 @@ class User {
     preferredLanguage: json['preferred_language'] as String,
     learningMode: json['learning_mode'] as String,
     roles: (json['roles'] as List).cast<String>(),
+    termsAccepted: json['terms_accepted'] as bool? ?? false,
   );
 
   final String id;
@@ -23,4 +25,7 @@ class User {
   final String preferredLanguage; // fr | wo
   final String learningMode; // text | audio
   final List<String> roles;
+
+  /// A accepté la version en vigueur des conditions d'utilisation.
+  final bool termsAccepted;
 }

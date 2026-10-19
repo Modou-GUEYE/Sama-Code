@@ -2,6 +2,7 @@
 package users
 
 import (
+	"net/http"
 	"strings"
 	"unicode/utf8"
 
@@ -9,6 +10,30 @@ import (
 )
 
 const maxDisplayNameRunes = 80
+
+// TermsVersion : version en vigueur des conditions générales d'utilisation (date de
+// mise à jour). À changer en même temps que le texte affiché par l'application
+// (mobile/lib/features/settings/views/terms_view.dart) : les candidats devront alors
+// les accepter de nouveau.
+const TermsVersion = "2026-10-19"
+
+var (
+	errTermsRequired = httpx.Validation("terms_version", "Vous devez accepter les conditions d'utilisation.")
+	errTermsOutdated = httpx.NewError(http.StatusConflict, "terms_outdated",
+		"Les conditions d'utilisation ont changé : mettez à jour l'application.")
+)
+
+// CheckTerms vérifie que la version acceptée est celle en vigueur.
+func CheckTerms(version string) error {
+	switch strings.TrimSpace(version) {
+	case "":
+		return errTermsRequired
+	case TermsVersion:
+		return nil
+	default:
+		return errTermsOutdated
+	}
+}
 
 // Langues du MVP (D10).
 var supportedLanguages = map[string]bool{"fr": true, "wo": true}

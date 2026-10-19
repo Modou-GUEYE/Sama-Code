@@ -102,6 +102,21 @@ class SessionViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Compte connecté qui n'a pas accepté la version en vigueur des CGU.
+  bool get needsTerms =>
+      status == SessionStatus.signedIn && user != null && !user!.termsAccepted;
+
+  /// Renvoie null si l'acceptation est enregistrée, sinon l'erreur de l'API.
+  Future<ApiException?> acceptTerms(String version) async {
+    try {
+      user = await _profile.acceptTerms(version);
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e;
+    }
+  }
+
   Future<void> reloadUser() async {
     await _loadUser();
     notifyListeners();

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/config.dart';
 import '../../../data/repositories/auth_repository.dart';
 
 /// Parcours d'authentification (D11) :
@@ -69,6 +70,14 @@ class AuthFlowViewModel extends ChangeNotifier {
     return true;
   }
 
+  /// Inscription : case « J'accepte les conditions d'utilisation » (Q13).
+  bool termsAccepted = false;
+
+  void setTermsAccepted(bool value) {
+    termsAccepted = value;
+    notifyListeners();
+  }
+
   Future<bool> requestCode([String? rawPhone]) => _run(() async {
     if (rawPhone != null) phone = rawPhone.trim();
     final result = await _auth.requestOtp(phone, otpPurpose);
@@ -101,6 +110,7 @@ class AuthFlowViewModel extends ChangeNotifier {
         language: language,
         learningMode: learningMode,
         pin: pin,
+        termsVersion: AppConfig.termsVersion,
       );
     } else {
       await _auth.resetPin(token, pin);

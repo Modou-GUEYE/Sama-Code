@@ -8,6 +8,7 @@ import (
 
 	"samacode/backend/internal/httpx"
 	"samacode/backend/internal/testutil"
+	"samacode/backend/internal/users"
 )
 
 const testPhone = "+221771234567"
@@ -52,7 +53,7 @@ func (f *fixture) register(t *testing.T) TokenPair {
 	}
 	pair, err := f.svc.Register(ctx, RegisterInput{
 		VerificationToken: res.VerificationToken, DisplayName: "  Awa   Diop ",
-		PreferredLanguage: "wo", LearningMode: "audio", PIN: "2580",
+		PreferredLanguage: "wo", LearningMode: "audio", PIN: "2580", TermsVersion: users.TermsVersion,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +97,7 @@ func TestVerificationTokenIsSingleUse(t *testing.T) {
 		t.Fatal(err)
 	}
 	in := RegisterInput{VerificationToken: res.VerificationToken, DisplayName: "Awa",
-		PreferredLanguage: "fr", LearningMode: "text", PIN: "2580"}
+		PreferredLanguage: "fr", LearningMode: "text", PIN: "2580", TermsVersion: users.TermsVersion}
 	if _, err := f.svc.Register(ctx, in); err != nil {
 		t.Fatal(err)
 	}

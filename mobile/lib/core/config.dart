@@ -9,6 +9,10 @@ class AppConfig {
 
   /// Éditeur et contacts affichés dans « À propos ».
   static const appName = 'Sama Code';
+
+  /// Version des conditions d'utilisation affichées (TermsView). Doit être identique
+  /// à users.TermsVersion côté API : sinon l'inscription est refusée (terms_outdated).
+  static const termsVersion = '2026-10-19';
   static const publisher = 'CFES SOLUTION';
   static const contactEmail = 'info@samacode.com';
 

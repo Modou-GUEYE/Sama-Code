@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/api/api_exception.dart';
 import '../../../core/config.dart';
+import '../../../core/session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 
 /// Conditions générales d'utilisation : introduction, résumé en clair, 12 articles
@@ -10,7 +14,11 @@ import '../../../shared/widgets/surfaces.dart';
 /// ⚠️ Projet rédigé pour le MVP : à faire relire et valider par un juriste avant la
 /// publication sur les boutiques d'applications (question Q13).
 class TermsView extends StatelessWidget {
-  const TermsView({super.key});
+  const TermsView({super.key, this.acceptance = false});
+
+  /// Mode acceptation (compte connecté sans la version en vigueur) : pas de retour,
+  /// bouton « J'accepte » en bas.
+  final bool acceptance;
 
   static const updatedOn = '19 octobre 2026';
 
@@ -144,23 +152,28 @@ class TermsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: acceptance ? const _AcceptBar() : null,
       body: GradientBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  iconSize: 30,
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  icon: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: Ink2.strong,
+              if (acceptance)
+                const SizedBox(height: 16)
+              else
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    iconSize: 30,
+                    tooltip: MaterialLocalizations.of(context)
+                        .backButtonTooltip,
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Ink2.strong,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
-                  onPressed: () => Navigator.of(context).pop(),
                 ),
-              ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
@@ -180,6 +193,13 @@ class TermsView extends StatelessWidget {
                   style: TextStyle(fontSize: 15, color: Ink2.muted),
                 ),
               ),
+              if (acceptance) ...[
+                InfoMessage(
+                  context.read<SessionViewModel>().strings.t('terms_updated'),
+                  icon: Icons.update_rounded,
+                ),
+                const SizedBox(height: 14),
+              ],
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text(_intro, style: _body),
@@ -280,6 +300,62 @@ class _Summary extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Barre du bas du mode acceptation : bouton « J'accepte », erreur éventuelle.
+class _AcceptBar extends StatefulWidget {
+  const _AcceptBar();
+
+  @override
+  State<_AcceptBar> createState() => _AcceptBarState();
+}
+
+class _AcceptBarState extends State<_AcceptBar> {
+  bool _busy = false;
+  ApiException? _error;
+
+  Future<void> _accept() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final error = await context.read<SessionViewModel>().acceptTerms(
+      AppConfig.termsVersion,
+    );
+    if (mounted) {
+      setState(() {
+        _busy = false;
+        _error = error;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SessionViewModel>().strings;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null) ...[
+              ErrorMessage(s.error(_error!.code, _error!.message)),
+              const SizedBox(height: 10),
+            ],
+            PrimaryButton(
+              label: s.t('i_accept'),
+              icon: Icons.check_rounded,
+              busy: _busy,
+              onPressed: _accept,
+            ),
+          ],
+        ),
       ),
     );
   }

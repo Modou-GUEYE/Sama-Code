@@ -23,4 +23,9 @@ class ProfileRepository {
     );
     return User.fromJson(json);
   }
+
+  /// Accepte la version [version] des conditions d'utilisation.
+  Future<User> acceptTerms(String version) async => User.fromJson(
+    await _api.post('/me/terms-acceptance', body: {'version': version}),
+  );
 }

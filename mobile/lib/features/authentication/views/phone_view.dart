@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/auth_scaffold.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
+import '../../settings/views/terms_view.dart';
 import '../viewmodels/auth_flow_viewmodel.dart';
 import 'auth_navigation.dart';
 import 'otp_view.dart';
@@ -72,7 +74,10 @@ class _PhoneViewState extends State<PhoneView> {
         label: pinLogin ? s.t('next') : s.t('get_code'),
         icon: pinLogin ? Icons.arrow_forward_rounded : Icons.sms_outlined,
         busy: vm.busy,
-        onPressed: _complete ? _submit : null,
+        // Inscription : les conditions d'utilisation doivent être acceptées (Q13).
+        onPressed: _complete && (!register || vm.termsAccepted)
+            ? _submit
+            : null,
       ),
       children: [
         SoftCard(
@@ -128,10 +133,88 @@ class _PhoneViewState extends State<PhoneView> {
             ],
           ),
         ),
+        if (register) ...[
+          const SizedBox(height: 16),
+          _TermsCheckbox(
+            value: vm.termsAccepted,
+            onChanged: vm.setTermsAccepted,
+            strings: s,
+          ),
+        ],
         if (vm.error != null) ...[
           const SizedBox(height: 16),
           ErrorMessage(describeError(s, vm.error!)),
         ],
+      ],
+    );
+  }
+}
+
+/// « J'accepte les conditions d'utilisation » : grande case à cocher, le lien ouvre
+/// le texte complet.
+class _TermsCheckbox extends StatelessWidget {
+  const _TermsCheckbox({
+    required this.value,
+    required this.onChanged,
+    required this.strings,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final AppStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = strings;
+    return Row(
+      children: [
+        Semantics(
+          label: '${s.t('accept_terms_prefix')}${s.t('accept_terms_link')}',
+          child: Transform.scale(
+            scale: 1.4,
+            child: Checkbox(
+              value: value,
+              activeColor: AppColors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5),
+              ),
+              onChanged: (v) => onChanged(v ?? false),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => onChanged(!value),
+            child: Text.rich(
+              TextSpan(
+                text: s.t('accept_terms_prefix'),
+                children: [
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TermsView()),
+                      ),
+                      child: Text(
+                        s.t('accept_terms_link'),
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.green,
+                          decoration: TextDecoration.underline,
+                          decorationColor: AppColors.green,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              style: const TextStyle(fontSize: 17, color: Ink2.strong),
+            ),
+          ),
+        ),
       ],
     );
   }

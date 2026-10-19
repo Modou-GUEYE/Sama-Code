@@ -308,6 +308,8 @@ type RegisterInput struct {
 	PreferredLanguage string `json:"preferred_language"`
 	LearningMode      string `json:"learning_mode"`
 	PIN               string `json:"pin"`
+	// TermsVersion : version des CGU acceptée par le candidat (obligatoire, Q13).
+	TermsVersion string `json:"terms_version"`
 }
 
 func (s *Service) Register(ctx context.Context, in RegisterInput) (TokenPair, error) {
@@ -324,6 +326,9 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (TokenPair, er
 	if err := ValidatePIN(in.PIN); err != nil {
 		return TokenPair{}, err
 	}
+	if err := users.CheckTerms(in.TermsVersion); err != nil {
+		return TokenPair{}, err
+	}
 	pinHash, err := HashPIN(in.PIN)
 	if err != nil {
 		return TokenPair{}, err
@@ -338,9 +343,10 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (TokenPair, er
 		}
 		var userID string
 		err = tx.QueryRow(ctx,
-			`INSERT INTO users (display_name, phone_number, phone_verified_at, pin_hash, preferred_language, learning_mode)
-			 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-			name, phone, now, pinHash, in.PreferredLanguage, in.LearningMode).Scan(&userID)
+			`INSERT INTO users (display_name, phone_number, phone_verified_at, pin_hash, preferred_language, learning_mode,
+			                    terms_version, terms_accepted_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $3) RETURNING id`,
+			name, phone, now, pinHash, in.PreferredLanguage, in.LearningMode, users.TermsVersion).Scan(&userID)
 		if database.IsUniqueViolation(err) {
 			return errPhoneTaken
 		}

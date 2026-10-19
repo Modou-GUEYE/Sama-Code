@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'features/authentication/views/welcome_view.dart';
 import 'features/home/views/home_view.dart';
 import 'features/onboarding/views/onboarding_views.dart';
+import 'features/settings/views/terms_view.dart';
 import 'shared/widgets/feedback.dart';
 
 class SamaCodeApp extends StatelessWidget {
@@ -36,12 +37,19 @@ class _RootGate extends StatelessWidget {
     final status = context.select<SessionViewModel, SessionStatus>(
       (s) => s.status,
     );
+    final needsTerms = context.select<SessionViewModel, bool>(
+      (s) => s.needsTerms,
+    );
     return KeyedSubtree(
-      key: ValueKey(status),
+      key: ValueKey((status, needsTerms)),
       child: switch (status) {
         SessionStatus.loading => const _SplashView(),
         SessionStatus.onboarding => const LanguageView(),
         SessionStatus.signedOut => const WelcomeView(),
+        // Compte créé avant les CGU, ou CGU mises à jour : acceptation d'abord.
+        SessionStatus.signedIn when needsTerms => const TermsView(
+          acceptance: true,
+        ),
         SessionStatus.signedIn => const HomeView(),
       },
     );

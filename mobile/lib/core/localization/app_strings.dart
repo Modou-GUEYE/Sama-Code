@@ -184,6 +184,12 @@ class AppStrings {
     'about_images_short': 'Voir',
     'licenses': 'Licences',
     'terms': 'Conditions d’utilisation',
+    'accept_terms_prefix': 'J’accepte les ',
+    'accept_terms_link': 'conditions d’utilisation',
+    'i_accept': 'J’accepte',
+    'terms_updated': 'Nos conditions d’utilisation ont été mises à jour. Lisez-les puis acceptez-les pour continuer.',
+    'error_terms_outdated':
+        'Les conditions d’utilisation ont changé. Mettez à jour l’application.',
     'contact_us': 'Nous contacter',
     'email': 'E-mail',
     'call': 'Appeler',

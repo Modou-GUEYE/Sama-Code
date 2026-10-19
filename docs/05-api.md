@@ -9,13 +9,14 @@ Préfixe `/api/v1`, JSON (sauf upload de fichiers). À formaliser dans
 |---|---|---|
 | POST | `/auth/otp/request` | Envoyer un code SMS (`phone_number`, `purpose`) |
 | POST | `/auth/otp/verify` | Vérifier le code ; renvoie un jeton temporaire ou des jetons de session |
-| POST | `/auth/register` | Créer le compte après OTP vérifié (nom, langue, mode, PIN) |
+| POST | `/auth/register` | Créer le compte après OTP vérifié (nom, langue, mode, PIN, `terms_version` acceptée) |
 | POST | `/auth/login` | Se connecter avec téléphone + PIN |
 | POST | `/auth/pin/reset` | Définir un nouveau PIN après OTP vérifié |
 | POST | `/auth/refresh` | Renouveler la session |
 | POST | `/auth/logout` | Fermer la session |
 | GET | `/me` | Consulter son profil |
 | PATCH | `/me` | Modifier ses préférences (langue d'écoute, mode écrit/audio) |
+| POST | `/me/terms-acceptance` | Accepter la version en vigueur des CGU (`{"version"}`, idempotent ; 409 `terms_outdated` si ancienne) |
 
 ## Cours et médias
 

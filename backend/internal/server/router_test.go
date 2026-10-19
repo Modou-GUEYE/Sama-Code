@@ -10,6 +10,7 @@ import (
 
 	"samacode/backend/internal/auth"
 	"samacode/backend/internal/testutil"
+	"samacode/backend/internal/users"
 )
 
 type client struct {
@@ -81,10 +82,20 @@ func TestCandidateJourney(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("otp/verify = %d %v", status, body)
 	}
-	status, body = c.do("POST", "/api/v1/auth/register", map[string]string{
+	register := map[string]string{
 		"verification_token": body["verification_token"].(string),
 		"display_name":       "Moussa Ndiaye", "preferred_language": "fr", "learning_mode": "text", "pin": "2580",
-	})
+	}
+	// Q13 : pas d'inscription sans accepter la version en vigueur des CGU.
+	if status, body = c.do("POST", "/api/v1/auth/register", register); status != http.StatusBadRequest {
+		t.Fatalf("inscription sans CGU = %d %v", status, body)
+	}
+	register["terms_version"] = "2000-01-01"
+	if status, body = c.do("POST", "/api/v1/auth/register", register); status != http.StatusConflict || errorCode(body) != "terms_outdated" {
+		t.Fatalf("inscription avec d'anciennes CGU = %d %v", status, body)
+	}
+	register["terms_version"] = users.TermsVersion
+	status, body = c.do("POST", "/api/v1/auth/register", register)
 	if status != http.StatusCreated {
 		t.Fatalf("register = %d %v", status, body)
 	}
@@ -98,7 +109,8 @@ func TestCandidateJourney(t *testing.T) {
 	c.token = body["access_token"].(string)
 
 	status, body = c.do("GET", "/api/v1/me", nil)
-	if status != http.StatusOK || body["display_name"] != "Moussa Ndiaye" || body["phone_number"] != "+221771234567" {
+	if status != http.StatusOK || body["display_name"] != "Moussa Ndiaye" || body["phone_number"] != "+221771234567" ||
+		body["terms_accepted"] != true || body["terms_version"] != users.TermsVersion {
 		t.Fatalf("GET /me = %d %v", status, body)
 	}
 	if roles := body["roles"].([]any); len(roles) != 1 || roles[0] != "candidate" {

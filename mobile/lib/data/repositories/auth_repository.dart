@@ -65,6 +65,7 @@ class AuthRepository {
     required String language,
     required String learningMode,
     required String pin,
+    required String termsVersion,
   }) async {
     final json = await _api.post(
       '/auth/register',
@@ -75,6 +76,7 @@ class AuthRepository {
         'preferred_language': language,
         'learning_mode': learningMode,
         'pin': pin,
+        'terms_version': termsVersion,
       },
     );
     await _tokens.save(TokenPair.fromJson(json));
