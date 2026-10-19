@@ -1,0 +1,10 @@
+# Écran de lancement natif : logo complet sur le fond de l'application.
+# Android 12+ impose une icône dans un cercle : l'emblème seul.
+# Régénérer : dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#F6F7F3"
+  image: assets/icon/splash.png
+  android_12:
+    color: "#F6F7F3"
+    image: assets/icon/splash_android12.png
+  fullscreen: false
