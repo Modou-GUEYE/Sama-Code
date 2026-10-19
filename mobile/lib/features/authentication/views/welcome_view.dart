@@ -87,17 +87,14 @@ class _WelcomeViewState extends State<WelcomeView>
                           children: [
                             const AppLogo(size: 240),
                             const SizedBox(height: 4),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                s.t('welcome'),
-                                maxLines: 1,
-                                softWrap: false,
-                                style: const TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800,
-                                  color: Ink2.strong,
-                                ),
+                            // Le logo porte déjà le nom : on ne le répète pas.
+                            Text(
+                              s.t('welcome'),
+                              style: const TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                                color: AppColors.greenDark,
                               ),
                             ),
                           ],
