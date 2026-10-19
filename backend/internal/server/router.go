@@ -61,6 +61,7 @@ func NewRouter(d Deps) http.Handler {
 			users.NewHandler(d.DB).Routes(r)
 			licenses.NewHandler(d.DB).Routes(r)
 			examengine.NewHandler(examengine.NewService(d.DB)).Routes(r)
+			courses.NewCandidateHandler(d.DB).Routes(r)
 
 			// Administration des contenus : éditeurs, validateurs et administrateurs.
 			// Les droits fins (publier, gérer les comptes) sont vérifiés plus bas ou dans les services.

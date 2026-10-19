@@ -8,6 +8,7 @@ import '../../../data/models/license_category.dart';
 import '../../../data/models/exam.dart';
 import '../../../data/repositories/exam_repository.dart';
 import '../../../data/repositories/license_repository.dart';
+import '../../courses/views/courses_home_view.dart';
 import '../../exam/views/exam_view.dart';
 import '../../exam/views/series_list_view.dart';
 import '../../practice/views/practice_home_view.dart';
@@ -34,22 +35,6 @@ class HomeView extends StatelessWidget {
 
 class _HomeBody extends StatelessWidget {
   const _HomeBody();
-
-  void _soon(BuildContext context, AppStrings s) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.schedule_rounded, color: Colors.white),
-              const SizedBox(width: 12),
-              Text(s.t('soon'), style: const TextStyle(fontSize: 18)),
-            ],
-          ),
-        ),
-      );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,9 +75,13 @@ class _HomeBody extends StatelessWidget {
                       child: _FeatureTile(
                         icon: Icons.menu_book_rounded,
                         label: s.t('courses'),
-                        badge: s.t('soon'),
+                        badge: s.t('courses_badge'),
                         color: AppColors.green,
-                        onTap: () => _soon(context, s),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const CoursesHomeView(),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),

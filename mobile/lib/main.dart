@@ -8,6 +8,7 @@ import 'core/session_viewmodel.dart';
 import 'core/storage/local_preferences.dart';
 import 'core/storage/token_store.dart';
 import 'data/repositories/auth_repository.dart';
+import 'data/repositories/course_repository.dart';
 import 'data/repositories/exam_repository.dart';
 import 'data/repositories/license_repository.dart';
 import 'data/repositories/practice_repository.dart';
@@ -25,6 +26,7 @@ Future<void> main() async {
   final licenses = LicenseRepository(api);
   final exams = ExamRepository(api);
   final practice = PracticeRepository(api);
+  final courses = CourseRepository(api);
   final session = SessionViewModel(prefs, auth, profile);
   api.onSessionExpired = session.onSessionExpired;
 
@@ -36,6 +38,7 @@ Future<void> main() async {
         Provider.value(value: licenses),
         Provider.value(value: exams),
         Provider.value(value: practice),
+        Provider.value(value: courses),
         ChangeNotifierProvider.value(value: session),
       ],
       child: const SamaCodeApp(),
