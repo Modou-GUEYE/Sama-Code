@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import 'loading_overlay.dart';
 import 'surfaces.dart';
 
 /// Gabarit des écrans d'accueil, d'inscription et de connexion : même fond en
@@ -17,6 +18,8 @@ class AuthScaffold extends StatelessWidget {
     this.step,
     this.totalSteps,
     this.bottom,
+    this.busy = false,
+    this.busyMessage,
   });
 
   final String title;
@@ -35,109 +38,121 @@ class AuthScaffold extends StatelessWidget {
   /// Action principale fixée en bas, qui remonte au-dessus du clavier.
   final Widget? bottom;
 
+  /// Chargement en cours : voile sur l'écran avec [busyMessage].
+  final bool busy;
+  final String? busyMessage;
+
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
     return Scaffold(
-      body: GradientBackground(
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: SizedBox(
-                  height: 48,
-                  child: Row(
-                    children: [
-                      if (canPop)
-                        IconButton(
-                          iconSize: 30,
-                          tooltip: MaterialLocalizations.of(context)
-                              .backButtonTooltip,
-                          icon: const Icon(
-                            Icons.arrow_back_rounded,
-                            color: Ink2.strong,
+      body: LoadingOverlay(
+        loading: busy,
+        message: busyMessage,
+        child: GradientBackground(
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                  child: SizedBox(
+                    height: 48,
+                    child: Row(
+                      children: [
+                        if (canPop)
+                          IconButton(
+                            iconSize: 30,
+                            tooltip: MaterialLocalizations.of(context)
+                                .backButtonTooltip,
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Ink2.strong,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
                           ),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      if (step != null && totalSteps != null) ...[
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _StepBar(step: step!, total: totalSteps!),
-                        ),
-                        const SizedBox(width: 56),
+                        if (step != null && totalSteps != null) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _StepBar(step: step!, total: totalSteps!),
+                          ),
+                          const SizedBox(width: 56),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Le logo (premier écran) reste au-dessus du titre ;
-                          // une icône se place sur la même ligne que le titre.
-                          if (leading != null) ...[
-                            leading!,
-                            const SizedBox(height: 20),
-                          ],
-                          Row(
-                            children: [
-                              if (leading == null && icon != null) ...[
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    color: iconColor.withValues(alpha: 0.14),
-                                    borderRadius: BorderRadius.circular(18),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Le logo (premier écran) reste au-dessus du titre ;
+                            // une icône se place sur la même ligne que le titre.
+                            if (leading != null) ...[
+                              leading!,
+                              const SizedBox(height: 20),
+                            ],
+                            Row(
+                              children: [
+                                if (leading == null && icon != null) ...[
+                                  Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      color: iconColor.withValues(alpha: 0.14),
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: Icon(
+                                      icon,
+                                      size: 30,
+                                      color: iconColor,
+                                    ),
                                   ),
-                                  child: Icon(icon, size: 30, color: iconColor),
+                                  const SizedBox(width: 14),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: const TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w800,
+                                      color: Ink2.strong,
+                                      height: 1.2,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(width: 14),
                               ],
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  style: const TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w800,
-                                    color: Ink2.strong,
-                                    height: 1.2,
-                                  ),
+                            ),
+                            if (subtitle != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                subtitle!,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  color: Ink2.muted,
                                 ),
                               ),
                             ],
-                          ),
-                          if (subtitle != null) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              subtitle!,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                color: Ink2.muted,
-                              ),
-                            ),
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 28),
-                    ...children,
-                  ],
+                      const SizedBox(height: 28),
+                      ...children,
+                    ],
+                  ),
                 ),
-              ),
-              if (bottom != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                  child: bottom,
-                ),
-            ],
+                if (bottom != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: bottom,
+                  ),
+              ],
+            ),
           ),
         ),
       ),

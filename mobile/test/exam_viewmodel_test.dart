@@ -1,4 +1,6 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sama_code/core/api/api_exception.dart';
 import 'package:sama_code/core/api/api_client.dart';
 import 'package:sama_code/core/storage/token_store.dart';
 import 'package:sama_code/data/models/exam.dart';
@@ -9,11 +11,16 @@ class FakeRepo extends ExamRepository {
   FakeRepo() : super(ApiClient(baseUrl: 'http://x', tokens: TokenStore()));
 
   final saved = <String, Set<String>>{};
+  int failuresLeft = 0;
   int submits = 0;
   late ExamSession session;
 
   @override
   Future<void> answer(String sessionId, String questionId, Set<String> optionIds) async {
+    if (failuresLeft > 0) {
+      failuresLeft--;
+      throw ApiException.network();
+    }
     saved[questionId] = {...optionIds};
   }
 
@@ -88,5 +95,23 @@ void main() {
     await vm.submit();
     expect(repo.submits, 1);
     vm.dispose();
+  });
+
+  test('hors connexion : la réponse est renvoyée automatiquement au retour du réseau', () {
+    fakeAsync((async) {
+      final repo = FakeRepo()..failuresLeft = 2;
+      final vm = ExamViewModel(repo, sessionJson());
+      vm.toggle(vm.current.options[0]);
+      async.flushMicrotasks();
+      expect(vm.hasPendingAnswers, isTrue);
+      expect(repo.saved, isEmpty);
+
+      async.elapse(const Duration(seconds: 6)); // 1er renvoi : encore hors connexion
+      expect(vm.hasPendingAnswers, isTrue);
+      async.elapse(const Duration(seconds: 6)); // 2e renvoi : réseau revenu
+      expect(vm.hasPendingAnswers, isFalse);
+      expect(repo.saved['single'], {'single-A'});
+      vm.dispose();
+    });
   });
 }

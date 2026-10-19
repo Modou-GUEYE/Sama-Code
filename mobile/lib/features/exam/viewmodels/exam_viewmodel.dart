@@ -45,6 +45,12 @@ class ExamViewModel extends ChangeNotifier {
   int get answeredCount =>
       questions.where((q) => (answers[q.id] ?? const {}).isNotEmpty).length;
   int get unansweredCount => questions.length - answeredCount;
+
+  /// Réponses pas encore reçues par le serveur (réseau coupé) : renvoyées automatiquement.
+  bool get hasPendingAnswers => _unsaved.isNotEmpty;
+  int _secondsSinceRetry = 0;
+  bool _retrying = false;
+
   bool isAnswered(ExamQuestion q) => (answers[q.id] ?? const {}).isNotEmpty;
   bool isSelected(ExamOption o) => answers[current.id]?.contains(o.id) ?? false;
 
@@ -58,6 +64,10 @@ class ExamViewModel extends ChangeNotifier {
           _alerts.add(m)) {
         onTimeAlert?.call(m);
       }
+    }
+    if (_unsaved.isNotEmpty && !_retrying && ++_secondsSinceRetry >= 5) {
+      _secondsSinceRetry = 0;
+      unawaited(_retryPending());
     }
     if (remaining == Duration.zero && finished == null && !submitting) {
       unawaited(submit());
@@ -87,6 +97,17 @@ class ExamViewModel extends ChangeNotifier {
     _unsaved.add(q.id);
     notifyListeners();
     unawaited(_save(q.id));
+  }
+
+  Future<void> _retryPending() async {
+    _retrying = true;
+    for (final id in _unsaved.toList()) {
+      await _save(id);
+      if (_unsaved.contains(id)) {
+        break; // toujours hors connexion : on réessaiera
+      }
+    }
+    _retrying = false;
   }
 
   Future<void> _save(String questionId) async {

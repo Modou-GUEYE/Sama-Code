@@ -69,6 +69,8 @@ class _NewPinViewState extends State<NewPinView> {
         : (vm.error != null ? describeError(s, vm.error!) : null);
 
     return AuthScaffold(
+      busy: vm.busy,
+      busyMessage: s.t('please_wait'),
       step: vm.flow == AuthFlow.register ? 4 : null,
       totalSteps: registrationSteps,
       icon: confirming ? Icons.lock_reset_rounded : Icons.lock_rounded,
@@ -82,11 +84,6 @@ class _NewPinViewState extends State<NewPinView> {
           enabled: !vm.busy,
           onCompleted: _onCompleted,
         ),
-        if (vm.busy)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          ),
       ],
     );
   }
@@ -116,6 +113,8 @@ class PinLoginView extends StatelessWidget {
     final s = context.watch<SessionViewModel>().strings;
     final locked = vm.error?.code == 'account_locked';
     return AuthScaffold(
+      busy: vm.busy,
+      busyMessage: s.t('please_wait'),
       icon: Icons.lock_open_rounded,
       title: s.t('pin_enter'),
       subtitle: vm.phone,

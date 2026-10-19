@@ -41,6 +41,8 @@ class _SeriesListBody extends StatelessWidget {
     final subtitleKey = 'license_${vm.license.code}_subtitle';
 
     return AuthScaffold(
+      busy: vm.starting,
+      busyMessage: s.t('please_wait'),
       icon: isTruck
           ? Icons.local_shipping_rounded
           : Icons.directions_car_rounded,

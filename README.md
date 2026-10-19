@@ -55,7 +55,7 @@ make run
 # Terminal 2 — application mobile sur le téléphone branché en USB
 export PATH="$PATH:$HOME/Library/Android/sdk/platform-tools"
 adb devices                         # le téléphone doit apparaître en « device »
-adb reverse tcp:8080 tcp:8080       # le téléphone joint l'API par le câble
+"/Users/mac/Desktop/SAMA CODE/scripts/tunnel-telephone.sh" &   # relie le téléphone à l'API par le câble, et le rétablit s'il saute
 cd "/Users/mac/Desktop/SAMA CODE/mobile"
 flutter run --dart-define=API_BASE_URL=http://localhost:8080/api/v1
 
@@ -65,4 +65,4 @@ npm run dev
 ```
 
 Dans `flutter run` : `r` = rechargement à chaud, `R` = redémarrage, `q` = quitter.
-À refaire si le câble est débranché : `adb reverse tcp:8080 tcp:8080`.
+Sans le script de tunnel, refaire `adb reverse tcp:8080 tcp:8080` après chaque débranchement.

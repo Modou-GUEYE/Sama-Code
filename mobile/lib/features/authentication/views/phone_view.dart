@@ -61,6 +61,8 @@ class _PhoneViewState extends State<PhoneView> {
     final register = vm.flow == AuthFlow.register;
 
     return AuthScaffold(
+      busy: vm.busy,
+      busyMessage: s.t('please_wait'),
       step: register ? 1 : null,
       totalSteps: register ? registrationSteps : null,
       icon: Icons.phone_android_rounded,

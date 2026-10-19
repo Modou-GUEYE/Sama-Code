@@ -11,6 +11,7 @@ import '../../../data/repositories/exam_repository.dart';
 import '../../../shared/widgets/auth_scaffold.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/listen_button.dart';
+import '../../../shared/widgets/loading_overlay.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../viewmodels/exam_viewmodel.dart';
 import 'result_view.dart';
@@ -97,102 +98,111 @@ class _ExamBodyState extends State<_ExamBody> {
         if (!didPop) _confirmQuit(context, s);
       },
       child: Scaffold(
-        body: GradientBackground(
-          child: SafeArea(
-            child: Column(
-              children: [
-                _TopBar(
-                  vm: vm,
-                  strings: s,
-                  onClose: () => _confirmQuit(context, s),
-                ),
-                Expanded(
-                  child: ListView(
-                    key: ValueKey(q.id),
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                    children: [
-                      SoftCard(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (content.imageUrl != null) ...[
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.network(
-                                  AppConfig.mediaUrl(content.imageUrl!),
-                                  height: 200,
-                                  width: double.infinity,
-                                  fit: BoxFit.contain,
+        body: LoadingOverlay(
+          loading: vm.submitting,
+          message: s.t('sending_answers'),
+          child: GradientBackground(
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _TopBar(
+                    vm: vm,
+                    strings: s,
+                    onClose: () => _confirmQuit(context, s),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      key: ValueKey(q.id),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                      children: [
+                        SoftCard(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (content.imageUrl != null) ...[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.network(
+                                    AppConfig.mediaUrl(content.imageUrl!),
+                                    height: 200,
+                                    width: double.infinity,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+                              Text(
+                                content.text,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: Ink2.strong,
+                                  height: 1.3,
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              if (content.audioUrl != null) ...[
+                                const SizedBox(height: 14),
+                                ListenButton(
+                                  key: ValueKey('audio-${q.id}'),
+                                  url: content.audioUrl!,
+                                  label: s.t('listen'),
+                                  autoPlay: session.learningMode == 'audio',
+                                ),
+                              ],
                             ],
-                            Text(
-                              content.text,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: Ink2.strong,
-                                height: 1.3,
-                              ),
-                            ),
-                            if (content.audioUrl != null) ...[
-                              const SizedBox(height: 14),
-                              ListenButton(
-                                key: ValueKey('audio-${q.id}'),
-                                url: content.audioUrl!,
-                                label: s.t('listen'),
-                                autoPlay: session.learningMode == 'audio',
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Icon(
-                            q.multiple
-                                ? Icons.checklist_rounded
-                                : Icons.touch_app_rounded,
-                            size: 20,
-                            color: Ink2.muted,
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            s.t(q.multiple ? 'several_answers' : 'one_answer'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Icon(
+                              q.multiple
+                                  ? Icons.checklist_rounded
+                                  : Icons.touch_app_rounded,
+                              size: 20,
                               color: Ink2.muted,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      for (final o in q.options) ...[
-                        _OptionTile(
-                          option: o,
-                          content: pick(o.contents, session.language),
-                          selected: vm.isSelected(o),
-                          multiple: q.multiple,
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            vm.toggle(o);
-                          },
+                            const SizedBox(width: 8),
+                            Text(
+                              s.t(
+                                q.multiple ? 'several_answers' : 'one_answer',
+                              ),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Ink2.muted,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
+                        for (final o in q.options) ...[
+                          _OptionTile(
+                            option: o,
+                            content: pick(o.contents, session.language),
+                            selected: vm.isSelected(o),
+                            multiple: q.multiple,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              vm.toggle(o);
+                            },
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        if (vm.hasPendingAnswers && vm.finished == null) ...[
+                          const SizedBox(height: 4),
+                          InfoMessage(
+                            s.t('saving_failed'),
+                            icon: Icons.wifi_off_rounded,
+                          ),
+                        ],
                       ],
-                      if (vm.error != null && vm.finished == null) ...[
-                        const SizedBox(height: 4),
-                        ErrorMessage(s.t('saving_failed')),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-                _BottomBar(vm: vm, strings: s),
-              ],
+                  _BottomBar(vm: vm, strings: s),
+                ],
+              ),
             ),
           ),
         ),

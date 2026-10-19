@@ -68,7 +68,8 @@ class InfoMessage extends StatelessWidget {
   }
 }
 
-/// Bouton principal avec indicateur de chargement.
+/// Bouton principal. Pendant un chargement il est grisé ; l'indicateur est affiché
+/// par-dessus l'écran (LoadingOverlay), jamais dans le bouton.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -91,39 +92,33 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilledButton(
       onPressed: busy ? null : onPressed,
-      child: busy
-          ? const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(strokeWidth: 3),
-            )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 26),
-                  const SizedBox(width: 12),
-                ],
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(label, maxLines: 1, softWrap: false),
-                  ),
-                ),
-                if (trailingIcon != null) ...[
-                  const SizedBox(width: 14),
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(trailingIcon, size: 22),
-                  ),
-                ],
-              ],
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 26),
+            const SizedBox(width: 12),
+          ],
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, maxLines: 1, softWrap: false),
             ),
+          ),
+          if (trailingIcon != null) ...[
+            const SizedBox(width: 14),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.22),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(trailingIcon, size: 22),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

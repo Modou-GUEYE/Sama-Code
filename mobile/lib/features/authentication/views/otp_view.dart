@@ -33,6 +33,8 @@ class OtpView extends StatelessWidget {
     final vm = context.watch<AuthFlowViewModel>();
     final s = context.watch<SessionViewModel>().strings;
     return AuthScaffold(
+      busy: vm.busy,
+      busyMessage: s.t('please_wait'),
       step: vm.flow == AuthFlow.register ? 2 : null,
       totalSteps: registrationSteps,
       icon: Icons.sms_rounded,
