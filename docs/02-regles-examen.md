@@ -91,7 +91,11 @@ correction et le chronomètre changent.
 
 ## Hors connexion
 
-L'examen blanc **hors ligne est autorisé** (décision D12).
+> **MVP (décision D24)** : l'examen se passe **en ligne**. Les coupures courtes sont tolérées :
+> les réponses non reçues sont renvoyées automatiquement toutes les 5 secondes et avant
+> la soumission. Aucune bonne réponse n'est stockée sur le téléphone.
+>
+> **Version 2 (reportée)** : examen complet sans réseau, décrit ci-dessous.
 
 - Le candidat télécharge au préalable l'instantané de la série (questions, propositions,
   médias, bonnes réponses chiffrées sur l'appareil).

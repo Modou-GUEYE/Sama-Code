@@ -51,8 +51,8 @@ Toutes ces routes exigent un compte connecté (D19).
 | GET | `/exam-sessions/{id}/result` | Résultat (après soumission) |
 | GET | `/exam-sessions/{id}/review` | Corrections (après soumission) |
 | GET | `/exam-sessions` | Historique de ses tentatives (paginé) |
-| GET | `/exam-series/{id}/offline-package` | Télécharger l'instantané pour l'examen hors ligne |
-| POST | `/sync/exam-sessions` | Envoyer des sessions passées hors ligne (idempotent via `client_session_id`) ; le serveur recalcule et renvoie les résultats officiels |
+| GET *(V2, D24)* | `/exam-series/{id}/offline-package` | Télécharger l'instantané pour l'examen hors ligne |
+| POST *(V2, D24)* | `/sync/exam-sessions` | Envoyer des sessions passées hors ligne (idempotent via `client_session_id`) ; le serveur recalcule et renvoie les résultats officiels |
 
 Chronomètre : la réponse de création/reprise de session contient `expires_at` et
 `server_time` pour que le mobile calcule le temps restant sans dépendre de l'horloge

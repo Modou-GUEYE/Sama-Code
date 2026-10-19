@@ -34,7 +34,7 @@ peut en changer dans les paramètres.
 - Historique et suivi de progression, révision des erreurs.
 - Administration web React (contenus, séries, publication, statistiques, audit).
 - API REST Go + PostgreSQL + stockage objet pour les médias.
-- Hors connexion pour les contenus téléchargés.
+- Hors connexion pour les cours, illustrations et audios téléchargés (examen complet hors ligne : version 2, D24).
 
 ## Thèmes de cours (exemples)
 

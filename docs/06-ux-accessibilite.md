@@ -31,7 +31,8 @@ résultat.
    l'ordre (en mode audio, question + propositions lues automatiquement, D20) → soumission → résultat (bonnes, fautes, sans réponse, réussi/ajourné) →
    corrections → revoir les erreurs et les cours associés.
 5. **Progression** : historique des examens, leçons terminées, erreurs à revoir.
-6. **Hors connexion** : télécharger cours/audios essentiels, consulter hors ligne, sync
+6. **Hors connexion** (D24) : cours, illustrations et audios consultables sans réseau une fois
+   téléchargés ; examen en ligne tolérant aux coupures courtes. Examen hors ligne : version 2.
    au retour du réseau.
 
 ## Charte graphique (à partir du logo)
