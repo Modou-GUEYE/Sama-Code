@@ -17,8 +17,9 @@ class FakeRepo extends PracticeRepository {
       });
 }
 
-PracticeItem item(String id) => PracticeItem.fromJson({
+PracticeItem item(String id, {String? last}) => PracticeItem.fromJson({
       'series_id': 's',
+      'last_outcome': last,
       'question': {
         'position': 1,
         'question_id': id,
@@ -50,5 +51,15 @@ void main() {
 
     vm.next();
     expect(vm.finished, isTrue);
+  });
+
+  test('reprise : démarre à la question demandée et garde les bonnes réponses déjà données', () {
+    final vm = PracticeViewModel(
+      FakeRepo(),
+      [item('q1', last: 'correct'), item('q2', last: 'incorrect'), item('q3')],
+      startIndex: 2,
+    );
+    expect(vm.question.id, 'q3');
+    expect(vm.correctCount, 1);
   });
 }

@@ -18,15 +18,25 @@ import '../viewmodels/practice_viewmodel.dart';
 
 /// Entraînement : question → choix → « Valider » → correction et explication → suivante.
 class PracticeView extends StatelessWidget {
-  const PracticeView({super.key, required this.items, this.onRetry});
+  const PracticeView({
+    super.key,
+    required this.items,
+    this.startIndex = 0,
+    this.onRetry,
+  });
 
   final List<PracticeItem> items;
+  final int startIndex;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (c) => PracticeViewModel(c.read<PracticeRepository>(), items),
+      create: (c) => PracticeViewModel(
+        c.read<PracticeRepository>(),
+        items,
+        startIndex: startIndex,
+      ),
       child: _PracticeBody(onRetry: onRetry),
     );
   }

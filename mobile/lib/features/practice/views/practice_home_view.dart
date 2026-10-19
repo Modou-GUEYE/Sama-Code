@@ -7,6 +7,7 @@ import '../../../core/session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/exam.dart';
 import '../../../data/repositories/practice_repository.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/auth_scaffold.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
@@ -42,23 +43,87 @@ class _PracticeHomeViewState extends State<PracticeHomeView> {
   }
 
   /// Charge les questions puis ouvre l'entraînement ; rafraîchit la progression au retour.
-  Future<void> _open(Future<List<PracticeItem>> Function() load) async {
+  /// [resumable] : série commencée mais pas finie → proposer de reprendre.
+  Future<void> _open(
+    Future<List<PracticeItem>> Function() load, {
+    bool resumable = false,
+  }) async {
     setState(() => _opening = true);
+    List<PracticeItem> items;
     try {
-      final items = await load();
-      if (!mounted || items.isEmpty) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) =>
-              PracticeView(items: items, onRetry: () => _open(load)),
-        ),
-      );
-      await _load();
+      items = await load();
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e);
+      return;
     } finally {
       if (mounted) setState(() => _opening = false);
     }
+    if (!mounted || items.isEmpty) return;
+
+    var start = 0;
+    final next = items.indexWhere((i) => i.lastOutcome == null);
+    if (resumable && next > 0) {
+      final resume = await _askResume(next + 1);
+      if (resume == null || !mounted) return;
+      if (resume) start = next;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PracticeView(
+          items: items,
+          startIndex: start,
+          onRetry: () => _open(load),
+        ),
+      ),
+    );
+    await _load();
+  }
+
+  /// true = reprendre à la question [questionNumber] ; false = recommencer.
+  Future<bool?> _askResume(int questionNumber) {
+    final s = context.read<SessionViewModel>().strings;
+    return showAppSheet<bool>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(
+                Icons.bookmark_rounded,
+                size: 44,
+                color: AppColors.orange,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                s.t('practice_started'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                  color: Ink2.strong,
+                ),
+              ),
+              const SizedBox(height: 24),
+              PrimaryButton(
+                label: '${s.t('resume_at')} $questionNumber',
+                icon: Icons.play_arrow_rounded,
+                onPressed: () => Navigator.of(sheet).pop(true),
+              ),
+              const SizedBox(height: 10),
+              SecondaryButton(
+                label: s.t('restart_from_start'),
+                icon: Icons.replay_rounded,
+                tinted: true,
+                onPressed: () => Navigator.of(sheet).pop(false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override

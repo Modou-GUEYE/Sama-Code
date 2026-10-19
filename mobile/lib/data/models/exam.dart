@@ -262,15 +262,25 @@ class PracticeLicense {
 
 /// Question d'entraînement et série dont elle vient.
 class PracticeItem {
-  const PracticeItem({required this.seriesId, required this.question});
+  const PracticeItem({
+    required this.seriesId,
+    required this.question,
+    this.lastOutcome,
+  });
 
   factory PracticeItem.fromJson(Map<String, dynamic> json) => PracticeItem(
     seriesId: json['series_id'] as String,
     question: ExamQuestion.fromJson(json['question'] as Map<String, dynamic>),
+    lastOutcome: json['last_outcome'] == null
+        ? null
+        : Outcome.values.byName(json['last_outcome'] as String),
   );
 
   final String seriesId;
   final ExamQuestion question;
+
+  /// Dernier résultat dans cette série ; null = pas encore répondue.
+  final Outcome? lastOutcome;
 }
 
 class PracticeCheck {

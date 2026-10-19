@@ -42,6 +42,15 @@ func TestPractice(t *testing.T) {
 		t.Fatal("bonne réponse non reconnue")
 	}
 
+	// Reprise : les questions déjà faites portent leur dernier résultat.
+	_, body = candidate.do("GET", "/api/v1/practice/series/"+seriesID+"/questions", nil)
+	got := body["items"].([]any)
+	if got[0].(map[string]any)["last_outcome"] != "incorrect" || got[1].(map[string]any)["last_outcome"] != "correct" ||
+		got[2].(map[string]any)["last_outcome"] != nil {
+		t.Fatalf("derniers résultats = %v / %v / %v", got[0].(map[string]any)["last_outcome"],
+			got[1].(map[string]any)["last_outcome"], got[2].(map[string]any)["last_outcome"])
+	}
+
 	// Réponse vide refusée.
 	status, body = candidate.do("POST", "/api/v1/practice/series/"+seriesID+"/questions/"+order[2]+"/check", map[string]any{"option_ids": []string{}})
 	mustStatus(t, status, body, http.StatusBadRequest, "réponse vide")

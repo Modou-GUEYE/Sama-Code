@@ -42,6 +42,9 @@ type PracticeLicense struct {
 type PracticeItem struct {
 	SeriesID string            `json:"series_id"`
 	Question CandidateQuestion `json:"question"`
+	// Dernier résultat du candidat sur cette question dans cette série (null = pas encore
+	// répondue) : permet de reprendre l'entraînement là où il s'est arrêté.
+	LastOutcome *scoring.Outcome `json:"last_outcome"`
 }
 
 type PracticeCheck struct {
@@ -150,15 +153,28 @@ func (s *Service) PracticeSummary(ctx context.Context, userID string) ([]Practic
 	return licenses, nil
 }
 
-// PracticeQuestions : questions d'une série publiée, dans l'ordre, sans les bonnes réponses.
-func (s *Service) PracticeQuestions(ctx context.Context, seriesID string) ([]PracticeItem, error) {
+// PracticeQuestions : questions d'une série publiée, dans l'ordre, sans les bonnes
+// réponses, avec le dernier résultat du candidat sur chacune.
+func (s *Service) PracticeQuestions(ctx context.Context, userID, seriesID string) ([]PracticeItem, error) {
 	snap, err := s.currentSnapshot(ctx, seriesID)
+	if err != nil {
+		return nil, err
+	}
+	last, err := s.lastPracticeResults(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]PracticeItem, 0, len(snap.Questions))
 	for _, q := range snap.Questions {
-		out = append(out, PracticeItem{SeriesID: seriesID, Question: candidateQuestion(q)})
+		item := PracticeItem{SeriesID: seriesID, Question: candidateQuestion(q)}
+		if ok, tried := last[practiceKey{seriesID, q.QuestionID}]; tried {
+			o := scoring.Incorrect
+			if ok {
+				o = scoring.Correct
+			}
+			item.LastOutcome = &o
+		}
+		out = append(out, item)
 	}
 	return out, nil
 }
@@ -271,7 +287,7 @@ func (h *Handler) practiceSummary(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) practiceQuestions(w http.ResponseWriter, r *http.Request) error {
-	items, err := h.svc.PracticeQuestions(r.Context(), chi.URLParam(r, "id"))
+	items, err := h.svc.PracticeQuestions(r.Context(), userID(r), chi.URLParam(r, "id"))
 	if err != nil {
 		return err
 	}

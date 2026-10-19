@@ -6,17 +6,24 @@ import '../../../data/repositories/practice_repository.dart';
 
 /// Entraînement : une question à la fois ; correction et explication après « Valider ».
 class PracticeViewModel extends ChangeNotifier {
-  PracticeViewModel(this._repo, this.items);
+  /// [startIndex] : reprise de l'entraînement ; les bonnes réponses déjà données
+  /// avant cette question comptent dans le bilan.
+  PracticeViewModel(this._repo, this.items, {int startIndex = 0})
+    : index = startIndex,
+      correctCount = items
+          .take(startIndex)
+          .where((i) => i.lastOutcome == Outcome.correct)
+          .length;
 
   final PracticeRepository _repo;
   final List<PracticeItem> items;
 
-  int index = 0;
+  int index;
   Set<String> selected = {};
   PracticeCheck? check;
   bool busy = false;
   ApiException? error;
-  int correctCount = 0;
+  int correctCount;
   bool finished = false;
 
   PracticeItem get current => items[index];
