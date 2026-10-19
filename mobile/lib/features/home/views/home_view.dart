@@ -5,7 +5,11 @@ import '../../../core/localization/app_strings.dart';
 import '../../../core/session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/license_category.dart';
+import '../../../data/models/exam.dart';
+import '../../../data/repositories/exam_repository.dart';
 import '../../../data/repositories/license_repository.dart';
+import '../../exam/views/exam_view.dart';
+import '../../exam/views/series_list_view.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../notifications/views/notifications_view.dart';
@@ -18,8 +22,10 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) =>
-          HomeViewModel(context.read<LicenseRepository>())..load(),
+      create: (context) => HomeViewModel(
+        context.read<LicenseRepository>(),
+        context.read<ExamRepository>(),
+      )..load(),
       child: const _HomeBody(),
     );
   }
@@ -60,7 +66,21 @@ class _HomeBody extends StatelessWidget {
               children: [
                 _Header(name: session.user?.displayName, strings: s),
                 const SizedBox(height: 20),
-                _HeroBanner(strings: s),
+                if (vm.currentExam != null)
+                  _ResumeBanner(
+                    exam: vm.currentExam!,
+                    strings: s,
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ExamView(session: vm.currentExam!),
+                        ),
+                      );
+                      await vm.load();
+                    },
+                  )
+                else
+                  _HeroBanner(strings: s),
                 const SizedBox(height: 28),
                 _SectionTitle(s.t('learn')),
                 Row(
@@ -109,7 +129,14 @@ class _HomeBody extends StatelessWidget {
                     _LicenseCard(
                       category: category,
                       strings: s,
-                      onTap: () => _soon(context, s),
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SeriesListView(license: category),
+                          ),
+                        );
+                        await vm.load();
+                      },
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -415,6 +442,73 @@ class _LicenseCard extends StatelessWidget {
               child: Icon(Icons.arrow_forward_rounded, color: color, size: 26),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bandeau « Examen en cours » : reprendre un examen interrompu (chronomètre actif).
+class _ResumeBanner extends StatelessWidget {
+  const _ResumeBanner({
+    required this.exam,
+    required this.strings,
+    required this.onTap,
+  });
+
+  final ExamSession exam;
+  final AppStrings strings;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = strings;
+    return Semantics(
+      button: true,
+      label: '${s.t('resume_banner')}. ${s.t('resume_banner_desc')}',
+      excludeSemantics: true,
+      child: Material(
+        color: AppColors.orange,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(Icons.timer_outlined, color: Colors.white, size: 44),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.t('resume_banner'),
+                        style: const TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'Permis ${exam.licenseCode} · ${s.t('series_n')} ${exam.seriesNumber} · ${s.t('resume_banner_desc')}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.play_circle_fill_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
