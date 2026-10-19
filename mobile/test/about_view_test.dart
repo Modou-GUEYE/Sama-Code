@@ -10,9 +10,10 @@ import 'package:sama_code/core/theme/app_theme.dart';
 import 'package:sama_code/data/repositories/auth_repository.dart';
 import 'package:sama_code/data/repositories/profile_repository.dart';
 import 'package:sama_code/features/settings/views/about_view.dart';
+import 'package:sama_code/features/settings/views/terms_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> pumpAbout(WidgetTester tester) async {
+Future<void> pumpAbout(WidgetTester tester, {ThemeData? theme}) async {
   PackageInfo.setMockInitialValues(
     appName: 'Sama Code',
     packageName: 'sn.samacode.sama_code',
@@ -38,7 +39,10 @@ Future<void> pumpAbout(WidgetTester tester) async {
           ),
         ),
       ],
-      child: MaterialApp(theme: buildAppTheme(), home: const AboutView()),
+      child: MaterialApp(
+        theme: theme ?? buildAppTheme(),
+        home: const AboutView(),
+      ),
     ),
   );
   // La route est animée en continu : pas de pumpAndSettle.
@@ -61,9 +65,21 @@ void main() {
     expect(find.text('Voir'), findsOneWidget);
     expect(find.bySemanticsLabel('WhatsApp : 77 353 13 77'), findsOneWidget);
     expect(
-      find.text('Une application éditée par Sama Code. Version 1.0.0'),
+      find.text('Éditée par CFES SOLUTION, version 1.0.0'),
       findsOneWidget,
     );
-    expect(find.text('Licences des logiciels'), findsOneWidget);
+    expect(find.text('Licences'), findsOneWidget);
+  });
+
+  testWidgets('à propos : le lien ouvre les conditions d’utilisation', (
+    tester,
+  ) async {
+    await pumpAbout(tester);
+    await tester.tap(find.text('Conditions d’utilisation'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(TermsView), findsOneWidget);
+    expect(find.textContaining('éditée par CFES\u00A0SOLUTION'), findsOneWidget);
+    expect(find.textContaining('77\u00A0353\u00A013\u00A077'), findsOneWidget);
   });
 }

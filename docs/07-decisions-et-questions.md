@@ -44,6 +44,7 @@
 | # | Question | Impact |
 |---|---|---|
 | Q8 | Hébergement cible (cloud, fournisseur local) et stockage objet retenu ? **À discuter au moment venu.** En attendant : Docker en local, MinIO pour simuler le stockage S3. | Déploiement |
+| Q13 | **CGU** (19/10/2026) : projet rédigé dans l'application (À propos, Conditions d'utilisation), éditeur **CFES SOLUTION**. À faire valider par un juriste ; prévoir une **acceptation explicite à l'inscription** et une **politique de confidentialité** publiée en ligne (URL exigée par le Play Store et l'App Store). | Publication sur les boutiques, données personnelles |
 | Q12 | Fournisseur SMS pour les OTP (Orange, Free, agrégateur…) et budget SMS ? **À discuter au moment venu** (phase 2). En attendant : interface `SMSSender` avec une implémentation de dev qui écrit le code dans les logs. | Module `auth`, coûts |
 
 ## Phasage

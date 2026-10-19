@@ -8,12 +8,20 @@ class AppConfig {
   );
 
   /// Éditeur et contacts affichés dans « À propos ».
-  static const publisher = 'Sama Code';
+  static const appName = 'Sama Code';
+  static const publisher = 'CFES SOLUTION';
   static const contactEmail = 'info@samacode.com';
 
   /// Numéro de contact (appel et WhatsApp), au format +221XXXXXXXXX ; vide masque
   /// les deux boutons.
   static const contactPhone = '+221773531377';
+
+  /// +221771234567 → 77 123 45 67
+  static String get contactPhoneDisplay {
+    final m = RegExp(r'^\+221(\d{2})(\d{3})(\d{2})(\d{2})$')
+        .firstMatch(contactPhone);
+    return m == null ? contactPhone : '${m[1]} ${m[2]} ${m[3]} ${m[4]}';
+  }
 
   /// Origine de l'API, pour les médias servis en chemins relatifs (/api/v1/media/…).
   static String mediaUrl(String path) => path.startsWith('http')

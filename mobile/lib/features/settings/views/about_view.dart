@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/animated_road.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
+import 'terms_view.dart';
 
 /// À propos, dans le style de l'écran de bienvenue : logo, présentation, trois
 /// icônes (lire, écouter, voir), route animée, contacts en gros boutons, puis éditeur et version.
@@ -87,12 +89,16 @@ class AboutView extends StatelessWidget {
                             ),
                             const Spacer(),
                             // La route passe entre les icônes et les contacts.
-                            const SizedBox(height: 130, child: AnimatedRoad()),
+                            const SizedBox(height: 110, child: AnimatedRoad()),
                             const SizedBox(height: 24),
                             Row(
                               children: [
                                 _ContactButton(
-                                  icon: Icons.mail_rounded,
+                                  icon: const Icon(
+                                    Icons.mail_rounded,
+                                    size: 30,
+                                    color: AppColors.green,
+                                  ),
                                   label: s.t('email'),
                                   semanticLabel:
                                       '${s.t('email')} : ${AppConfig.contactEmail}',
@@ -107,10 +113,14 @@ class AboutView extends StatelessWidget {
                                 if (phone.isNotEmpty) ...[
                                   const SizedBox(width: 10),
                                   _ContactButton(
-                                    icon: Icons.call_rounded,
+                                    icon: const Icon(
+                                      Icons.call_rounded,
+                                      size: 30,
+                                      color: AppColors.green,
+                                    ),
                                     label: s.t('call'),
                                     semanticLabel:
-                                        '${s.t('call')} : ${_formatPhone(phone)}',
+                                        '${s.t('call')} : ${AppConfig.contactPhoneDisplay}',
                                     onTap: () => _open(
                                       context,
                                       Uri(scheme: 'tel', path: phone),
@@ -118,10 +128,14 @@ class AboutView extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 10),
                                   _ContactButton(
-                                    icon: Icons.chat_rounded,
+                                    icon: const FaIcon(
+                                      FontAwesomeIcons.whatsapp,
+                                      size: 32,
+                                      color: Color(0xFF25D366),
+                                    ),
                                     label: s.t('whatsapp'),
                                     semanticLabel:
-                                        '${s.t('whatsapp')} : ${_formatPhone(phone)}',
+                                        '${s.t('whatsapp')} : ${AppConfig.contactPhoneDisplay}',
                                     onTap: () => _open(
                                       context,
                                       Uri.https(
@@ -157,12 +171,6 @@ class AboutView extends StatelessWidget {
       mode: LaunchMode.externalApplication,
     ).catchError((_) => false);
     if (!opened) messenger.showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  /// +221771234567 → 77 123 45 67
-  static String _formatPhone(String e164) {
-    final m = RegExp(r'^\+221(\d{2})(\d{3})(\d{2})(\d{2})$').firstMatch(e164);
-    return m == null ? e164 : '${m[1]} ${m[2]} ${m[3]} ${m[4]}';
   }
 }
 
@@ -229,7 +237,7 @@ class _ContactButton extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String label;
   final String semanticLabel;
   final VoidCallback onTap;
@@ -251,7 +259,7 @@ class _ContactButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
               child: Column(
                 children: [
-                  Icon(icon, size: 30, color: AppColors.green),
+                  SizedBox(height: 32, child: Center(child: icon)),
                   const SizedBox(height: 6),
                   Text(
                     label,
@@ -287,30 +295,56 @@ class _Footer extends StatelessWidget {
         FutureBuilder<PackageInfo>(
           future: PackageInfo.fromPlatform(),
           builder: (context, snap) => Text(
-            '${s.t('published_by')} ${AppConfig.publisher}. ${s.t('version')} ${snap.data?.version ?? ''}',
+            '${s.t('published_by')} ${AppConfig.publisher}, ${s.t('version').toLowerCase()} ${snap.data?.version ?? ''}',
             textAlign: TextAlign.center,
             style: muted,
           ),
         ),
-        TextButton(
-          onPressed: () => showLicensePage(
-            context: context,
-            applicationName: AppConfig.publisher,
-            applicationIcon: const Padding(
-              padding: EdgeInsets.all(8),
-              child: AppLogo(size: 96),
+        // Une ligne en temps normal ; passe à la ligne en très grande police.
+        Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            _FooterLink(
+              label: s.t('terms'),
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const TermsView())),
             ),
-          ),
-          child: Text(
-            s.t('licenses'),
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.green,
+            _FooterLink(
+              label: s.t('licenses'),
+              onPressed: () => showLicensePage(
+                context: context,
+                applicationName: AppConfig.appName,
+                applicationIcon: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: AppLogo(size: 96),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  const _FooterLink({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: AppColors.green,
+        ),
+      ),
     );
   }
 }
