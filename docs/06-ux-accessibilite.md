@@ -16,12 +16,13 @@ résultat.
 - Navigation courte et cohérente, peu de niveaux.
 - Propositions de réponse identifiables visuellement (lettres A/B/C/D + couleur + forme)
   et énoncées à l'audio.
-- Changement de mode écrit/audio possible à tout moment dans les paramètres.
+- Changement de mode écrit/audio et de langue d'écoute possible à tout moment dans les paramètres.
+- Texte toujours en français ; le wolof est entendu, jamais affiché (D25).
 - Prévoir des appareils Android modestes et une connexion faible.
 
 ## Parcours principaux
 
-1. **Onboarding** : choix de la langue (fr / wo, avec audio) → présentation courte →
+1. **Onboarding** : choix de la langue d'écoute (fr / wo ; le texte reste en français, D25) → présentation courte →
    choix du mode (écrit / audio) → numéro de téléphone → code SMS → création du PIN.
    Aucun contenu n'est accessible sans compte (D19).
 2. **Cours** : thèmes → cours → leçon (texte + audio + illustrations) → marquer terminé.

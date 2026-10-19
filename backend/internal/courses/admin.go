@@ -26,8 +26,9 @@ var (
 	errBadCode      = httpx.Validation("code", "Code invalide : lettres minuscules, chiffres et tirets (ex. panneaux).")
 	errNoFrench     = httpx.Validation("translations.fr", "Le titre en français est obligatoire.")
 	errIncomplete   = httpx.NewError(http.StatusUnprocessableEntity, "content_incomplete",
-		"Le contenu doit exister en français et en wolof avant d'être soumis ou publié.")
-	codePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,40}$`)
+		"Le contenu doit avoir son titre et ses blocs en français avant d'être soumis ou publié.")
+	errWolofText = httpx.Validation("translations.wo", "En wolof, seul l'audio est enregistré (D25).")
+	codePattern  = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,40}$`)
 )
 
 // Translation : libellé d'un thème, d'un cours ou d'une leçon dans une langue.
@@ -45,6 +46,9 @@ func (t Translations) validate() error {
 			return httpx.Validation("translations", "Langue non prise en charge : "+lang)
 		}
 		tr.Title = strings.TrimSpace(tr.Title)
+		if lang == "wo" && (tr.Title != "" || (tr.Description != nil && strings.TrimSpace(*tr.Description) != "")) {
+			return errWolofText
+		}
 		if tr.AudioMediaID != nil && !httpx.IsUUID(*tr.AudioMediaID) {
 			return httpx.Validation("translations."+lang, "Identifiant de média invalide.")
 		}
@@ -56,7 +60,8 @@ func (t Translations) validate() error {
 	return nil
 }
 
-func (t Translations) complete() bool { return t["fr"].Title != "" && t["wo"].Title != "" }
+// complete : le titre français suffit ; l'audio wolof du titre est facultatif (D25).
+func (t Translations) complete() bool { return t["fr"].Title != "" }
 
 // Block : bloc de contenu d'une leçon (texte, audio ou image).
 type Block struct {
@@ -571,6 +576,9 @@ func (h *AdminHandler) setLessonContents(w http.ResponseWriter, r *http.Request)
 			return httpx.Validation("contents", "Langue non prise en charge : "+lang)
 		}
 		for i, b := range blocks {
+			if lang == "wo" && b.ContentType != "audio" {
+				return httpx.Validation("contents.wo", "En wolof, une leçon ne contient que des audios (D25).")
+			}
 			switch b.ContentType {
 			case "text":
 				if b.Text == nil || strings.TrimSpace(*b.Text) == "" {
@@ -667,11 +675,12 @@ func (h *AdminHandler) changeStatus(ctx context.Context, p httpx.Principal, tabl
 				return errIncomplete.With("missing", "translations")
 			}
 			if entity == "lesson" {
-				var langs int
-				if err := tx.QueryRow(ctx, `SELECT count(DISTINCT language_code) FROM lesson_contents WHERE lesson_id = $1`, id).Scan(&langs); err != nil {
+				var hasFrench bool
+				if err := tx.QueryRow(ctx,
+					`SELECT EXISTS (SELECT 1 FROM lesson_contents WHERE lesson_id = $1 AND language_code = 'fr')`, id).Scan(&hasFrench); err != nil {
 					return err
 				}
-				if langs < 2 {
+				if !hasFrench {
 					return errIncomplete.With("missing", "contents")
 				}
 			}
@@ -720,7 +729,7 @@ func writeTranslations(ctx context.Context, tx pgx.Tx, table, fk, titleCol, id s
 		return err
 	}
 	for lang, t := range tr {
-		if t.Title == "" {
+		if t.Title == "" && t.AudioMediaID == nil {
 			continue
 		}
 		var err error

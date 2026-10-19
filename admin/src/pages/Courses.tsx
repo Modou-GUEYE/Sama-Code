@@ -38,7 +38,7 @@ export function Courses() {
     <>
       <PageHead
         title="Cours"
-        subtitle="Thèmes → cours → leçons, à lire ou à écouter en français et en wolof."
+        subtitle="Thèmes, cours et leçons. Texte en français, audio en français et en wolof."
         actions={
           <button className="btn secondary" onClick={() => setEditing('new')}>
             <Plus size={16} strokeWidth={2.4} /> Nouveau thème
@@ -91,7 +91,7 @@ export function Courses() {
                 <div>
                   <h2>{category.translations.fr?.title}</h2>
                   <span className="muted small">
-                    {category.translations.wo?.title ?? <span className="badge lang">Wolof manquant</span>}
+                    {!category.translations.wo?.audio_media_id && <span className="badge lang">Audio wolof manquant</span>}
                   </span>
                 </div>
                 <div className="row">
@@ -110,7 +110,7 @@ export function Courses() {
                     <tr key={c.id} className="clickable" onClick={() => navigate(`/courses/${c.id}`)}>
                       <td>
                         <b>{c.translations.fr?.title}</b>
-                        <div className="muted small">{c.translations.wo?.title ?? 'Wolof manquant'}</div>
+                        {!c.translations.wo?.audio_media_id && <div className="muted small">Audio wolof manquant</div>}
                       </td>
                       <td className="muted">{c.lesson_count} leçon(s)</td>
                       <td style={{ textAlign: 'right' }}>

@@ -1,10 +1,8 @@
 import type { Lang, Translation, Translations } from '../api/types'
-import { MediaField } from './MediaField'
+import { AudioPair } from './AudioPair'
 import { Field } from './ui'
 
-const LABEL: Record<Lang, string> = { fr: 'Français', wo: 'Wolof' }
-
-/** Titre (et audio du titre) en français et en wolof, côte à côte. */
+/** Titre en français, avec son audio en français et en wolof (D25 : le wolof est uniquement audio). */
 export function TranslationFields({
   value,
   onChange,
@@ -20,35 +18,34 @@ export function TranslationFields({
     onChange({ ...value, [lang]: { title: '', audio_media_id: null, ...value[lang], ...patch } })
 
   return (
-    <div className="grid cols-2">
-      {(['fr', 'wo'] as Lang[]).map((lang) => (
-        <div key={lang} className="stack">
-          <Field label={`${titleLabel} (${LABEL[lang]})`}>
-            <input className="input" value={value[lang]?.title ?? ''} onChange={(e) => set(lang, { title: e.target.value })} />
-          </Field>
-          {withDescription && (
-            <Field label={`Description (${LABEL[lang]})`}>
-              <textarea
-                className="textarea"
-                style={{ minHeight: 60 }}
-                value={value[lang]?.description ?? ''}
-                onChange={(e) => set(lang, { description: e.target.value })}
-              />
-            </Field>
-          )}
-          <MediaField
-            kind="audio"
-            label={`Audio du titre (${LABEL[lang].toLowerCase()})`}
-            value={value[lang]?.audio_media_id}
-            onChange={(v) => set(lang, { audio_media_id: v })}
+    <div className="stack">
+      <Field label={titleLabel}>
+        <input className="input" value={value.fr?.title ?? ''} onChange={(e) => set('fr', { title: e.target.value })} />
+      </Field>
+      {withDescription && (
+        <Field label="Description">
+          <textarea
+            className="textarea"
+            style={{ minHeight: 60 }}
+            value={value.fr?.description ?? ''}
+            onChange={(e) => set('fr', { description: e.target.value })}
           />
-        </div>
-      ))}
+        </Field>
+      )}
+      <AudioPair
+        what={titleLabel.toLowerCase() === 'nom' ? 'nom' : 'titre'}
+        fr={value.fr?.audio_media_id ?? null}
+        wo={value.wo?.audio_media_id ?? null}
+        onChange={(lang, v) => set(lang, { audio_media_id: v })}
+      />
     </div>
   )
 }
 
-/** Supprime les langues sans titre avant l'envoi. */
+/** Garde le français s'il a un titre, et le wolof seulement s'il a un audio (sans texte). */
 export function cleanTranslations(t: Translations): Translations {
-  return Object.fromEntries(Object.entries(t).filter(([, v]) => v && v.title.trim() !== '')) as Translations
+  const out: Translations = {}
+  if (t.fr && t.fr.title.trim() !== '') out.fr = t.fr
+  if (t.wo?.audio_media_id) out.wo = { title: '', audio_media_id: t.wo.audio_media_id }
+  return out
 }

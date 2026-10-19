@@ -334,7 +334,9 @@ class _Explanation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final e = check.explanations[language] ?? check.explanations['fr'];
+    final e = check.explanations.isEmpty
+        ? null
+        : pick(check.explanations, language);
     if (e == null || (e.text.isEmpty && e.audioUrl == null)) {
       return const SizedBox.shrink();
     }

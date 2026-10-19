@@ -1,6 +1,7 @@
 // Commande seed-demo : crée et publie des séries de DÉMONSTRATION (permis B série 1,
 // permis C série 1) pour tester l'examen en développement. Les questions sont
-// marquées [DÉMO] et leur wolof [À traduire] : ce ne sont pas des contenus validés.
+// marquées [DÉMO] : ce ne sont pas des contenus validés. Pas de texte wolof (D25) :
+// le wolof n'a que des audios, à enregistrer dans l'administration.
 //
 //	go run ./cmd/seed-demo -phone "77 123 45 67"   (compte administrateur existant)
 package main
@@ -109,7 +110,6 @@ func run(rawPhone string) error {
 			QuestionType: "single",
 			Contents: map[string]questions.Content{
 				"fr": {Text: "[DÉMO] " + d.text, Explanation: &demos[i].explanation},
-				"wo": {Text: "[À traduire] " + d.text},
 			},
 		}
 		if len(d.correct) > 1 {
@@ -120,7 +120,6 @@ func run(rawPhone string) error {
 				Code: string(rune('A' + j)),
 				Contents: map[string]questions.OptionContent{
 					"fr": {Text: opt},
-					"wo": {Text: "[À traduire] " + opt},
 				},
 			}
 			for _, c := range d.correct {

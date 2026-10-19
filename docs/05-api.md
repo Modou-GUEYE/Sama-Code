@@ -15,7 +15,7 @@ Préfixe `/api/v1`, JSON (sauf upload de fichiers). À formaliser dans
 | POST | `/auth/refresh` | Renouveler la session |
 | POST | `/auth/logout` | Fermer la session |
 | GET | `/me` | Consulter son profil |
-| PATCH | `/me` | Modifier ses préférences (langue, mode écrit/audio) |
+| PATCH | `/me` | Modifier ses préférences (langue d'écoute, mode écrit/audio) |
 
 ## Cours et médias
 
@@ -90,8 +90,9 @@ effet au renouvellement du jeton d'accès (15 min au plus).
 
 **Cycle de publication** (`POST …/status {"status": …}`) : `draft → in_review`
 (éditeur), `in_review → published` (validateur), `published → draft | archived`
-(validateur), `archived → draft` (admin). Soumettre ou publier exige le contenu
-complet en **fr et en wo**.
+(validateur), `archived → draft` (admin). Soumettre ou publier exige le texte
+**français** complet. Le wolof n'a que des audios (D25) : un texte wolof est refusé
+(400) ; les audios manquants sont signalés dans l'admin (obligatoires avant le pilote).
 
 | Méthode | Endpoint | Rôle |
 |---|---|---|
@@ -104,7 +105,7 @@ complet en **fr et en wo**.
 | GET | `/admin/media?type=audio\|image` | Médias récents |
 | GET | `/media/{id}/file` | **public** — lire un fichier (cache immuable, lecture partielle) |
 | GET | `/admin/questions?status=&search=&page=` | Liste paginée |
-| POST | `/admin/questions` | Créer (fr obligatoire, wo possible plus tard) |
+| POST | `/admin/questions` | Créer (texte fr obligatoire ; wo : audios seulement) |
 | GET / PUT | `/admin/questions/{id}` | Lire / remplacer. Modifier une question publiée la repasse en brouillon (version + 1) ; refusé si elle est dans une série publiée |
 | POST | `/admin/questions/{id}/status` | Cycle de publication |
 | GET | `/admin/exam-series?license_category_id=` | Séries |
@@ -119,7 +120,7 @@ complet en **fr et en wo**.
 | POST | `/admin/courses/{id}/status` | Cycle de publication |
 | POST | `/admin/courses/{id}/lessons` | Créer une leçon |
 | GET / PUT | `/admin/lessons/{id}` | Leçon + blocs |
-| PUT | `/admin/lessons/{id}/contents` | Blocs `{fr: [{content_type, text, media_id}], wo: […]}` |
+| PUT | `/admin/lessons/{id}/contents` | Blocs `{fr: [{content_type, text, media_id}], wo: [audios seulement]}` |
 | POST | `/admin/lessons/{id}/status` | Cycle de publication |
 
 **Suppression définitive** (`DELETE`) : `/admin/questions/{id}`, `/admin/exam-series/{id}`,

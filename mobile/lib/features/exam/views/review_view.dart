@@ -174,8 +174,9 @@ class _ReviewCard extends StatelessWidget {
         s.t('unanswered'),
       ),
     };
-    final explanation =
-        review.explanations[language] ?? review.explanations['fr'];
+    final explanation = review.explanations.isEmpty
+        ? null
+        : pick(review.explanations, language);
 
     return SoftCard(
       padding: const EdgeInsets.all(18),

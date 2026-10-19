@@ -3,7 +3,7 @@
 > Le Code de la route à la portée de tous.
 
 Application d'apprentissage du Code de la route au Sénégal, pour les personnes
-lettrées comme illettrées (français et wolof, texte et audio).
+lettrées comme illettrées : texte en français, audio en français et en wolof.
 
 | Dossier | Contenu | État |
 |---|---|---|

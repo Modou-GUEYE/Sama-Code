@@ -70,7 +70,7 @@ func TestDeleteCourses(t *testing.T) {
 	e := newAdminEnv(t)
 	editor, validator := e.user("editor"), e.user("validator")
 	tr := func(title string) map[string]any {
-		return map[string]any{"fr": map[string]any{"title": title}, "wo": map[string]any{"title": title + " (wo)"}}
+		return map[string]any{"fr": map[string]any{"title": title}}
 	}
 
 	status, body := editor.do("POST", "/api/v1/admin/course-categories", map[string]any{"code": "panneaux", "translations": tr("Panneaux")})
@@ -85,7 +85,6 @@ func TestDeleteCourses(t *testing.T) {
 	text := "Le triangle à bord rouge annonce un danger."
 	status, body = editor.do("PUT", "/api/v1/admin/lessons/"+lesson+"/contents", map[string]any{
 		"fr": []map[string]any{{"content_type": "text", "text": text}},
-		"wo": []map[string]any{{"content_type": "text", "text": text + " (wo)"}},
 	})
 	mustStatus(t, status, body, http.StatusOK, "contenu de la leçon")
 

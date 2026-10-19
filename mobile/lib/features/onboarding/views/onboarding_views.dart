@@ -7,7 +7,7 @@ import '../../../shared/widgets/auth_scaffold.dart';
 import '../../../shared/widgets/big_choice_card.dart';
 import '../../../shared/widgets/feedback.dart';
 
-/// Écran 1 : choix de la langue (fr / wo). L'interface bascule immédiatement.
+/// Écran 1 : langue d'écoute (fr / wo). Les textes restent en français (D25).
 class LanguageView extends StatelessWidget {
   const LanguageView({super.key});
 
@@ -18,6 +18,7 @@ class LanguageView extends StatelessWidget {
     return AuthScaffold(
       leading: const AppLogo(size: 120),
       title: s.t('choose_language'),
+      subtitle: s.t('choose_language_desc'),
       children: [
         BigChoiceCard(
           leading: const InitialsBadge('FR'),

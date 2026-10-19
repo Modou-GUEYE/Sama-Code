@@ -24,7 +24,7 @@ class SessionViewModel extends ChangeNotifier {
   String learningMode;
   User? user;
 
-  AppStrings get strings => AppStrings(language);
+  AppStrings get strings => const AppStrings();
 
   Future<void> init() async {
     if (await _auth.hasSession()) {

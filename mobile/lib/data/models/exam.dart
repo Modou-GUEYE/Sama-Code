@@ -19,11 +19,16 @@ Map<String, LocalizedContent> _contents(Object? json) => {
     e.key as String: LocalizedContent.fromJson(e.value as Map<String, dynamic>),
 };
 
-/// Choisit la langue de l'utilisateur, sinon le français.
-LocalizedContent pick(
-  Map<String, LocalizedContent> contents,
-  String language,
-) => contents[language] ?? contents['fr'] ?? const LocalizedContent(text: '');
+/// Texte et image en français ; audio dans la langue d'écoute [language], sinon en
+/// français (D25 : le wolof n'existe qu'en audio).
+LocalizedContent pick(Map<String, LocalizedContent> contents, String language) {
+  final fr = contents['fr'] ?? const LocalizedContent(text: '');
+  return LocalizedContent(
+    text: fr.text,
+    imageUrl: fr.imageUrl,
+    audioUrl: contents[language]?.audioUrl ?? fr.audioUrl,
+  );
+}
 
 class ExamOption {
   const ExamOption({

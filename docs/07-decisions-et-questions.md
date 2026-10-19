@@ -20,7 +20,7 @@
 
 | # | Décision | Détail |
 |---|---|---|
-| D10 | Langues du MVP : **français + wolof** (`fr`, `wo`). | Tous les contenus (cours, questions, propositions, explications) existent dans les deux langues, en texte et en audio. |
+| D10 | Langues du MVP : **français + wolof** (`fr`, `wo`). **Précisée par D25 (19/10/2026)** : le wolof est une langue d'écoute (audio seulement), pas une langue d'affichage. | Texte en français ; audios en français et en wolof pour tous les contenus (cours, questions, propositions, explications). |
 | D11 | Authentification par **numéro de téléphone** : code SMS (OTP) **ou** code PIN. | Inscription et récupération par OTP SMS ; connexion quotidienne par PIN (moins coûteux en SMS) ou par OTP. Voir [05-api.md](05-api.md). |
 | D12 | ~~Examen blanc hors connexion autorisé.~~ **Remplacée par D24 (19/10/2026).** | — |
 | D13 | **Durée de l'examen : 20 minutes**, paramétrable par l'admin. | Champ `exam_duration_minutes` par catégorie de permis. À l'expiration, soumission automatique. |
@@ -34,7 +34,8 @@
 | D21 | Les contenus (cours, audios fr + wo, illustrations, questions, séries) sont **produits et validés dans l'administration**. | Via les rôles éditeur pédagogique et validateur ; cycle brouillon → validation → publication. |
 | D22 | **Les questions d'entraînement sont celles des séries d'examen.** | Mode entraînement = même série, mais correction après chaque question. Une banque de questions unique. |
 | D24 | **Hors connexion allégé pour le MVP** (19/10/2026) : cours, illustrations et audios consultables hors ligne une fois téléchargés ; examen tolérant aux coupures courtes (réponses renvoyées automatiquement). **L'examen complet sans réseau (résultat provisoire + synchronisation) est reporté en version 2**, selon les retours du pilote. | Moins de risque (bonnes réponses stockées sur le téléphone, synchronisation) ; on garde l'essentiel pour le public : apprendre sans réseau et économiser les données. |
-| D23 | **Explications traduites et enregistrées en audio** (fr + wo). | `explanation` déplacée de `questions` vers `question_contents`. |
+| D23 | **Explications enregistrées en audio** (fr + wo) ; texte en français seulement (D25). | `explanation` déplacée de `questions` vers `question_contents`. |
+| D25 | **Le wolof est uniquement audio** (19/10/2026). Le wolof sert aux personnes qui ne lisent pas : même traduite en wolof écrit, l'application resterait illisible pour elles. Tout le texte (interface et contenus) est en **français** ; chaque contenu a un **audio français et un audio wolof**, et des illustrations. Le candidat choisit sa **langue d'écoute** (fr ou wo) au démarrage et dans les paramètres ; le mode écrit/audio est conservé (en mode audio, lecture automatique, D20). | Pas de texte wolof en base ni dans l'admin (refusé par l'API). Boutons, lettres A/B/C et inscription inchangés : le candidat s'habitue, l'audio le guide, et il peut se faire aider pour écrire son nom. Publication possible avec le texte français seul ; les audios manquants sont signalés dans l'admin et **deviendront obligatoires avant le pilote**. |
 
 ## Questions ouvertes
 
@@ -53,7 +54,7 @@
 | 2. Socle technique | Dépôts, environnements, API Go, PostgreSQL, migrations, auth, CI/CD | Terminé le 18/10/2026 (fournisseur SMS et hébergement en attente) |
 | 3. Administration pédagogique | Catégories, cours, médias, questions, séries, publication | API faite (18/10/2026) ; interface React en cours |
 | 4. Moteur d'examen | Choix de série, sessions, chronomètre, réponses, soumission, calcul, résultats | Fait (19/10/2026) : API + écrans mobiles ; 13 critères d'acceptation testés |
-| 5. Application Flutter | MVVM, cours écrits/audio, QCM, examens, résultats, progression | À faire |
+| 5. Application Flutter | MVVM, cours écrits/audio, QCM, examens, résultats, progression | Fait (19/10/2026) : cours, entraînement, examens, « Mes examens » |
 | 6. Cours hors ligne (D24) | Cours, illustrations et audios téléchargés et consultables sans réseau | À faire — examen hors ligne reporté en V2 |
 | 7. Validation pilote | Tests fonctionnels, accessibilité, contenus, sécurité, pilote | À faire |
 
@@ -62,7 +63,7 @@
 | Risque | Mesure |
 |---|---|
 | Contenu non conforme aux règles locales | Validation par des experts, vérification des textes |
-| Audio mal compris / traduction wolof approximative | Validation par des locuteurs, tests avec le public |
+| Audio wolof mal compris ou approximatif | Enregistrements validés par des locuteurs, tests avec le public |
 | Réseau instable / perte de session | Sauvegarde progressive, reprise, sync idempotente |
 | Fuite des bonnes réponses | Exclues des API avant correction, tests dédiés |
 | Fuite des réponses via le mode hors ligne (V2) | Évitée dans le MVP : aucune bonne réponse n'est stockée sur le téléphone (D24) |

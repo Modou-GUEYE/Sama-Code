@@ -129,7 +129,7 @@ export function CourseEditor() {
                     </td>
                     <td>
                       <b>{l.translations.fr?.title}</b>
-                      <div className="muted small">{l.translations.wo?.title ?? 'Wolof manquant'}</div>
+                      {!l.translations.wo?.audio_media_id && <div className="muted small">Audio wolof manquant</div>}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <StatusBadge status={l.status} />

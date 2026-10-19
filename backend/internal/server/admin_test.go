@@ -70,17 +70,16 @@ func (e *adminEnv) licenseID(code string) string {
 	return id
 }
 
-// question : corps complet (fr + wo), réponse unique, bonne réponse A.
+// question : texte en français (le wolof n'a que des audios, D25), réponse unique, bonne réponse A.
 func question(label string) map[string]any {
 	return map[string]any{
 		"question_type": "single",
 		"contents": map[string]any{
 			"fr": map[string]any{"text": "Question " + label, "explanation": "Parce que " + label},
-			"wo": map[string]any{"text": "Laaj " + label},
 		},
 		"options": []map[string]any{
-			{"code": "A", "is_correct": true, "contents": map[string]any{"fr": map[string]any{"text": "Oui"}, "wo": map[string]any{"text": "Waaw"}}},
-			{"code": "B", "is_correct": false, "contents": map[string]any{"fr": map[string]any{"text": "Non"}, "wo": map[string]any{"text": "Déedéet"}}},
+			{"code": "A", "is_correct": true, "contents": map[string]any{"fr": map[string]any{"text": "Oui"}}},
+			{"code": "B", "is_correct": false, "contents": map[string]any{"fr": map[string]any{"text": "Non"}}},
 		},
 	}
 }
@@ -102,16 +101,15 @@ func TestAdminContentWorkflow(t *testing.T) {
 	status, body := candidate.do("GET", "/api/v1/admin/questions", nil)
 	mustStatus(t, status, body, http.StatusForbidden, "candidat → admin")
 
-	// Brouillon en français seul : accepté.
-	draft := question("1")
-	delete(draft["contents"].(map[string]any), "wo")
-	status, body = editor.do("POST", "/api/v1/admin/questions", draft)
+	// D25 : pas de texte wolof (le wolof n'a que des audios).
+	withWolofText := question("1")
+	withWolofText["contents"].(map[string]any)["wo"] = map[string]any{"text": "Laaj 1"}
+	status, body = editor.do("POST", "/api/v1/admin/questions", withWolofText)
+	mustStatus(t, status, body, http.StatusBadRequest, "texte wolof")
+
+	status, body = editor.do("POST", "/api/v1/admin/questions", question("1"))
 	mustStatus(t, status, body, http.StatusCreated, "création brouillon")
 	qid := body["id"].(string)
-
-	// Soumettre sans le wolof : refusé (D10).
-	status, body = editor.do("POST", "/api/v1/admin/questions/"+qid+"/status", map[string]string{"status": "in_review"})
-	mustStatus(t, status, body, http.StatusUnprocessableEntity, "soumission sans wolof")
 
 	// Réponse unique avec deux bonnes réponses : refusée.
 	bad := question("x")
@@ -120,7 +118,7 @@ func TestAdminContentWorkflow(t *testing.T) {
 	mustStatus(t, status, body, http.StatusBadRequest, "deux bonnes réponses")
 
 	status, body = editor.do("PUT", "/api/v1/admin/questions/"+qid, question("1"))
-	mustStatus(t, status, body, http.StatusOK, "ajout du wolof")
+	mustStatus(t, status, body, http.StatusOK, "modification")
 	status, body = editor.do("POST", "/api/v1/admin/questions/"+qid+"/status", map[string]string{"status": "in_review"})
 	mustStatus(t, status, body, http.StatusOK, "soumission")
 

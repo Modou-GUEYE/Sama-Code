@@ -12,8 +12,6 @@ import (
 	"samacode/backend/internal/httpx"
 )
 
-var languages = []string{"fr", "wo"}
-
 // Content : énoncé et explication dans une langue.
 type Content struct {
 	Text                    string  `json:"text"`
@@ -65,9 +63,11 @@ const (
 var optionCode = regexp.MustCompile(`^[A-F]$`)
 
 var errIncomplete = httpx.NewError(http.StatusUnprocessableEntity, "question_incomplete",
-	"La question doit être complète en français et en wolof avant d'être soumise ou publiée.")
+	"La question doit être complète en français avant d'être soumise ou publiée.")
 
-// validate contrôle un brouillon : le français est obligatoire, le wolof peut venir plus tard.
+var errWolofText = httpx.Validation("contents.wo", "En wolof, seul l'audio est enregistré (D25).")
+
+// validate contrôle un brouillon : le texte est en français ; le wolof n'a que des audios (D25).
 func (in *Input) validate() error {
 	if in.QuestionType != "single" && in.QuestionType != "multiple" {
 		return httpx.Validation("question_type", "Type invalide (single ou multiple).")
@@ -80,6 +80,9 @@ func (in *Input) validate() error {
 			return httpx.Validation("contents", "Langue non prise en charge : "+lang)
 		}
 		c.Text = strings.TrimSpace(c.Text)
+		if lang == "wo" && (c.Text != "" || c.ImageMediaID != nil || (c.Explanation != nil && strings.TrimSpace(*c.Explanation) != "")) {
+			return errWolofText
+		}
 		if len(c.Text) > maxText {
 			return httpx.Validation("contents."+lang+".text", "Énoncé trop long.")
 		}
@@ -112,6 +115,9 @@ func (in *Input) validate() error {
 				return httpx.Validation("options", "Langue non prise en charge : "+lang)
 			}
 			c.Text = strings.TrimSpace(c.Text)
+			if lang == "wo" && (c.Text != "" || c.ImageMediaID != nil) {
+				return errWolofText
+			}
 			if err := checkMediaIDs("options."+o.Code+"."+lang, c.AudioMediaID, c.ImageMediaID); err != nil {
 				return err
 			}
@@ -130,18 +136,17 @@ func (in *Input) validate() error {
 	return nil
 }
 
-// Complete : exigé pour soumettre ou publier (D10 : tout existe en fr ET en wo).
+// Complete : exigé pour soumettre ou publier. Le texte est en français ; les audios
+// (français et wolof) sont recommandés mais pas encore bloquants (D25).
 func (q *Question) Complete() error {
-	for _, lang := range languages {
-		c, ok := q.Contents[lang]
-		if !ok || strings.TrimSpace(c.Text) == "" {
-			return errIncomplete.With("missing", "contents."+lang)
-		}
-		for _, o := range q.Options {
-			oc := o.Contents[lang]
-			if strings.TrimSpace(oc.Text) == "" && oc.ImageMediaID == nil {
-				return errIncomplete.With("missing", "options."+o.Code+"."+lang)
-			}
+	c, ok := q.Contents["fr"]
+	if !ok || strings.TrimSpace(c.Text) == "" {
+		return errIncomplete.With("missing", "contents.fr")
+	}
+	for _, o := range q.Options {
+		oc := o.Contents["fr"]
+		if strings.TrimSpace(oc.Text) == "" && oc.ImageMediaID == nil {
+			return errIncomplete.With("missing", "options."+o.Code+".fr")
 		}
 	}
 	return nil

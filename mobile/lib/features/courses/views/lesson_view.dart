@@ -214,7 +214,7 @@ class _LessonViewState extends State<LessonView> {
                       label: lesson.nextLessonId != null
                           ? (lesson.completed
                                 ? s.t('next_lesson')
-                                : '${s.t('lesson_done')} →')
+                                : s.t('lesson_done'))
                           : (lesson.completed
                                 ? s.t('back_to_course')
                                 : s.t('lesson_done')),

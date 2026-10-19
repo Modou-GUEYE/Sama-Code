@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
-import type { Lang, Option, Question, QuestionContent, Status } from '../api/types'
+import type { Lang, Option, OptionContent, Question, QuestionContent, Status } from '../api/types'
 import { MediaField } from '../components/MediaField'
 import { DeleteButton } from '../components/DeleteButton'
 import { StatusActions } from '../components/StatusActions'
 import { Alert, Field, Loading, PageHead, StatusBadge, Tabs, useAction } from '../components/ui'
+import { AudioPair } from '../components/AudioPair'
 
 type Draft = Pick<Question, 'question_type' | 'related_lesson_id' | 'contents' | 'options'>
 
@@ -33,14 +34,23 @@ const newDraft = (): Draft => ({
   options: [emptyOption('A'), emptyOption('B')],
 })
 
-/** Éditeur d'une question : énoncé, explication et propositions en fr et wo. */
+/** Le wolof n'a que des audios (D25) : on n'envoie pas de texte, et la langue est omise sans audio. */
+function wolofContent(c: QuestionContent | undefined): QuestionContent | null {
+  if (!c?.audio_media_id && !c?.explanation_audio_media_id) return null
+  return { ...emptyContent(), explanation: null, audio_media_id: c.audio_media_id, explanation_audio_media_id: c.explanation_audio_media_id }
+}
+
+function wolofOption(c: OptionContent | undefined): OptionContent | null {
+  return c?.audio_media_id ? { text: '', image_media_id: null, audio_media_id: c.audio_media_id } : null
+}
+
+/** Éditeur d'une question : texte en français, audios en français et en wolof (D25). */
 export function QuestionEditor() {
   const { id } = useParams()
   const isNew = id === undefined
   const navigate = useNavigate()
   const [draft, setDraft] = useState<Draft | null>(isNew ? newDraft() : null)
   const [meta, setMeta] = useState<{ status: Status; version: number } | null>(null)
-  const [lang, setLang] = useState<Lang>('fr')
   const [loadError, setLoadError] = useState<string | null>(null)
   const save = useAction()
 
@@ -65,16 +75,16 @@ export function QuestionEditor() {
   if (loadError) return <Alert>{loadError}</Alert>
   if (!draft) return <Loading />
 
-  const content = draft.contents[lang] ?? emptyContent()
-  const setContent = (patch: Partial<QuestionContent>) =>
-    setDraft({ ...draft, contents: { ...draft.contents, [lang]: { ...content, ...patch } } })
+  const content = (lang: Lang) => draft.contents[lang] ?? emptyContent()
+  const setContent = (lang: Lang, patch: Partial<QuestionContent>) =>
+    setDraft({ ...draft, contents: { ...draft.contents, [lang]: { ...content(lang), ...patch } } })
 
   const setOption = (i: number, patch: Partial<Option>) =>
     setDraft({ ...draft, options: draft.options.map((o, j) => (j === i ? { ...o, ...patch } : o)) })
 
-  const setOptionText = (i: number, l: Lang, text: string) => {
+  const setOptionContent = (i: number, l: Lang, patch: Partial<OptionContent>) => {
     const o = draft.options[i]
-    setOption(i, { contents: { ...o.contents, [l]: { ...(o.contents[l] ?? { audio_media_id: null, image_media_id: null }), text } } })
+    setOption(i, { contents: { ...o.contents, [l]: { text: '', audio_media_id: null, image_media_id: null, ...o.contents[l], ...patch } } })
   }
 
   const toggleCorrect = (i: number) => {
@@ -97,11 +107,14 @@ export function QuestionEditor() {
 
   async function submit() {
     if (!draft) return
+    const wo = wolofContent(draft.contents.wo)
     const body = {
       ...draft,
-      contents: Object.fromEntries(
-        Object.entries(draft.contents).filter(([, c]) => c && c.text.trim() !== ''),
-      ),
+      contents: { fr: draft.contents.fr, ...(wo && { wo }) },
+      options: draft.options.map((o) => {
+        const owo = wolofOption(o.contents.wo)
+        return { ...o, contents: { fr: o.contents.fr, ...(owo && { wo: owo }) } }
+      }),
     }
     const q = await save.run(
       () => (isNew ? api.post<Question>('/admin/questions', body) : api.put<Question>(`/admin/questions/${id}`, body)),
@@ -128,7 +141,7 @@ export function QuestionEditor() {
     <>
       <PageHead
         title={isNew ? 'Nouvelle question' : 'Question'}
-        subtitle={meta ? `Version ${meta.version}` : 'Le français est obligatoire ; le wolof est exigé avant la validation.'}
+        subtitle={meta ? `Version ${meta.version}` : 'Texte en français. Le wolof est uniquement audio.'}
         actions={
           <>
             {meta && <StatusBadge status={meta.status} />}
@@ -142,14 +155,7 @@ export function QuestionEditor() {
       <div className="stack" style={{ gap: 16 }}>
         <div className="card stack">
           <div className="row between">
-            <Tabs<Lang>
-              value={lang}
-              onChange={setLang}
-              options={[
-                { value: 'fr', label: 'Français' },
-                { value: 'wo', label: 'Wolof' },
-              ]}
-            />
+            <h2>Énoncé</h2>
             <Tabs<'single' | 'multiple'>
               value={draft.question_type}
               onChange={(t) =>
@@ -166,37 +172,36 @@ export function QuestionEditor() {
             />
           </div>
 
-          <Field label={`Énoncé (${lang === 'fr' ? 'français' : 'wolof'})`}>
-            <textarea
-              className="textarea"
-              value={content.text}
-              onChange={(e) => setContent({ text: e.target.value })}
-              placeholder="Que signifie ce panneau ?"
-            />
+          <textarea
+            className="textarea"
+            aria-label="Énoncé"
+            value={content('fr').text}
+            onChange={(e) => setContent('fr', { text: e.target.value })}
+            placeholder="Que signifie ce panneau ?"
+          />
+          <Field label="Illustration">
+            <MediaField kind="image" value={content('fr').image_media_id} onChange={(v) => setContent('fr', { image_media_id: v })} />
           </Field>
-          <div className="grid cols-2">
-            <Field label="Illustration">
-              <MediaField kind="image" value={content.image_media_id} onChange={(v) => setContent({ image_media_id: v })} />
-            </Field>
-            <Field label="Audio de l’énoncé">
-              <MediaField kind="audio" value={content.audio_media_id} onChange={(v) => setContent({ audio_media_id: v })} />
-            </Field>
-          </div>
+          <AudioPair
+            what="l’énoncé"
+            fr={content('fr').audio_media_id}
+            wo={content('wo').audio_media_id}
+            onChange={(lang, v) => setContent(lang, { audio_media_id: v })}
+          />
           <Field label="Explication (affichée après correction)">
             <textarea
               className="textarea"
               style={{ minHeight: 70 }}
-              value={content.explanation ?? ''}
-              onChange={(e) => setContent({ explanation: e.target.value })}
+              value={content('fr').explanation ?? ''}
+              onChange={(e) => setContent('fr', { explanation: e.target.value })}
             />
           </Field>
-          <Field label="Audio de l’explication">
-            <MediaField
-              kind="audio"
-              value={content.explanation_audio_media_id}
-              onChange={(v) => setContent({ explanation_audio_media_id: v })}
-            />
-          </Field>
+          <AudioPair
+            what="l’explication"
+            fr={content('fr').explanation_audio_media_id}
+            wo={content('wo').explanation_audio_media_id}
+            onChange={(lang, v) => setContent(lang, { explanation_audio_media_id: v })}
+          />
         </div>
 
         <div className="card stack">
@@ -214,16 +219,9 @@ export function QuestionEditor() {
               <input
                 className="input"
                 style={{ background: '#fff' }}
-                placeholder="Français"
+                placeholder="Texte de la proposition"
                 value={o.contents.fr?.text ?? ''}
-                onChange={(e) => setOptionText(i, 'fr', e.target.value)}
-              />
-              <input
-                className="input"
-                style={{ background: '#fff' }}
-                placeholder="Wolof"
-                value={o.contents.wo?.text ?? ''}
-                onChange={(e) => setOptionText(i, 'wo', e.target.value)}
+                onChange={(e) => setOptionContent(i, 'fr', { text: e.target.value })}
               />
               <label className="check">
                 <input
@@ -243,6 +241,14 @@ export function QuestionEditor() {
               >
                 <Trash2 size={16} />
               </button>
+              <div className="option-audios">
+                <AudioPair
+                  compact
+                  fr={o.contents.fr?.audio_media_id ?? null}
+                  wo={o.contents.wo?.audio_media_id ?? null}
+                  onChange={(lang, v) => setOptionContent(i, lang, { audio_media_id: v })}
+                />
+              </div>
             </div>
           ))}
           {draft.options.length < CODES.length && (

@@ -134,10 +134,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .stat span { color: var(--muted); font-weight: 600; }
 
 .option-row {
-  display: grid; grid-template-columns: 44px 1fr 1fr auto 40px; gap: 10px; align-items: start;
+  display: grid; grid-template-columns: 44px 1fr auto 40px; gap: 10px; align-items: start;
   padding: 10px; border-radius: 16px; background: var(--bg);
 }
 .option-row.correct { background: var(--green-pale); }
+.option-audios { grid-column: 2 / 4; }
+.option-row .media-field { background: #fff; min-height: 44px; padding: 5px 8px; }
 .option-code {
   width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
   background: #fff; font-weight: 800; font-size: 17px;

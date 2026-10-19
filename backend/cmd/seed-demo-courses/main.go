@@ -1,6 +1,7 @@
 // Commande seed-demo-courses : crée et publie des cours de DÉMONSTRATION pour tester
-// l'application en développement. Textes marqués [DÉMO], wolof [À traduire] : ce ne
-// sont pas des contenus validés. Réutilise les illustrations de demo-illustrations.
+// l'application en développement. Cours marqués [DÉMO] : ce ne sont pas des contenus
+// validés. Texte en français seulement (D25 : le wolof n'a que des audios). Réutilise
+// les illustrations de demo-illustrations.
 //
 //	go run ./cmd/seed-demo-courses
 package main
@@ -130,28 +131,22 @@ func run() error {
 						imageID = &id
 					}
 				}
-				for _, lang := range []string{"fr", "wo"} {
-					prefix := ""
-					if lang == "wo" {
-						prefix = "[À traduire] "
+				order := 0
+				if imageID != nil {
+					if _, err := tx.Exec(ctx,
+						`INSERT INTO lesson_contents (lesson_id, language_code, content_type, sort_order, media_id)
+						 VALUES ($1, 'fr', 'image', 0, $2)`, lessonID, *imageID); err != nil {
+						return err
 					}
-					order := 0
-					if imageID != nil {
-						if _, err := tx.Exec(ctx,
-							`INSERT INTO lesson_contents (lesson_id, language_code, content_type, sort_order, media_id)
-							 VALUES ($1, $2, 'image', 0, $3)`, lessonID, lang, *imageID); err != nil {
-							return err
-						}
-						order++
+					order++
+				}
+				for _, p := range l.text {
+					if _, err := tx.Exec(ctx,
+						`INSERT INTO lesson_contents (lesson_id, language_code, content_type, sort_order, text_content)
+						 VALUES ($1, 'fr', 'text', $2, $3)`, lessonID, order, p); err != nil {
+						return err
 					}
-					for _, p := range l.text {
-						if _, err := tx.Exec(ctx,
-							`INSERT INTO lesson_contents (lesson_id, language_code, content_type, sort_order, text_content)
-							 VALUES ($1, $2, 'text', $3, $4)`, lessonID, lang, order, prefix+p); err != nil {
-							return err
-						}
-						order++
-					}
+					order++
 				}
 			}
 			fmt.Printf("Cours « %s » publié (%d leçons).\n", c.title, len(c.lessons))
@@ -160,10 +155,8 @@ func run() error {
 	})
 }
 
-// translate écrit le libellé fr et sa version wo à traduire.
+// translate écrit le libellé français.
 func translate(ctx context.Context, tx pgx.Tx, table, fk, col, id, title string) error {
-	_, err := tx.Exec(ctx,
-		`INSERT INTO `+table+` (`+fk+`, language_code, `+col+`) VALUES ($1, 'fr', $2), ($1, 'wo', $3)`,
-		id, title, "[À traduire] "+title)
+	_, err := tx.Exec(ctx, `INSERT INTO `+table+` (`+fk+`, language_code, `+col+`) VALUES ($1, 'fr', $2)`, id, title)
 	return err
 }

@@ -18,9 +18,15 @@ Map<String, Label> _labels(Object? json) => {
     e.key as String: Label.fromJson(e.value as Map<String, dynamic>),
 };
 
-/// Libellé dans la langue de l'utilisateur, sinon en français.
-Label pickLabel(Map<String, Label> labels, String language) =>
-    labels[language] ?? labels['fr'] ?? const Label(title: '');
+/// Titre en français ; audio dans la langue d'écoute, sinon en français (D25).
+Label pickLabel(Map<String, Label> labels, String language) {
+  final fr = labels['fr'] ?? const Label(title: '');
+  return Label(
+    title: fr.title,
+    description: fr.description,
+    audioUrl: labels[language]?.audioUrl ?? fr.audioUrl,
+  );
+}
 
 class CourseSummary {
   const CourseSummary({
@@ -137,9 +143,14 @@ class Lesson {
   final bool completed;
   final String? nextLessonId;
 
-  /// Blocs dans la langue de l'utilisateur, sinon en français.
-  List<LessonBlock> blocksFor(String language) =>
-      blocks[language]?.isNotEmpty == true
-      ? blocks[language]!
-      : (blocks['fr'] ?? const []);
+  /// Blocs à afficher : texte et images en français. Pour une autre langue d'écoute
+  /// qui a ses audios (le wolof, D25), ils remplacent les audios français, en tête.
+  List<LessonBlock> blocksFor(String language) {
+    final fr = blocks['fr'] ?? const <LessonBlock>[];
+    final heard = (blocks[language] ?? const <LessonBlock>[])
+        .where((b) => b.type == 'audio')
+        .toList();
+    if (language == 'fr' || heard.isEmpty) return fr;
+    return [...heard, ...fr.where((b) => b.type != 'audio')];
+  }
 }

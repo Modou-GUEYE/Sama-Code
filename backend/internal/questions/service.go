@@ -206,7 +206,7 @@ type Summary struct {
 	Status       string `json:"status"`
 	Version      int    `json:"version"`
 	TextFr       string `json:"text_fr"`
-	HasWolof     bool   `json:"has_wolof"`
+	HasWolof     bool   `json:"has_wolof"` // audio wolof de l'énoncé présent (D25)
 	OptionCount  int    `json:"option_count"`
 	SeriesCount  int    `json:"series_count"`
 }
@@ -227,7 +227,7 @@ func (s *Service) List(ctx context.Context, status, search string, page httpx.Pa
 	}
 	rows, err := s.db.Query(ctx,
 		`SELECT q.id, q.question_type, q.status, q.version, COALESCE(fr.text_content, ''),
-		        EXISTS (SELECT 1 FROM question_contents wo WHERE wo.question_id = q.id AND wo.language_code = 'wo'),
+		        EXISTS (SELECT 1 FROM question_contents wo WHERE wo.question_id = q.id AND wo.language_code = 'wo' AND wo.audio_media_id IS NOT NULL),
 		        (SELECT count(*) FROM answer_options o WHERE o.question_id = q.id),
 		        (SELECT count(*) FROM series_questions sq WHERE sq.question_id = q.id)
 		   FROM questions q
@@ -248,7 +248,7 @@ func writeContents(ctx context.Context, tx pgx.Tx, id string, in Input) error {
 		return err
 	}
 	for lang, c := range in.Contents {
-		if strings.TrimSpace(c.Text) == "" {
+		if strings.TrimSpace(c.Text) == "" && c.AudioMediaID == nil && c.ExplanationAudioMediaID == nil {
 			continue
 		}
 		if _, err := tx.Exec(ctx,

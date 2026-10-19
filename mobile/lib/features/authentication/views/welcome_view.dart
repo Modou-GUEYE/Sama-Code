@@ -75,13 +75,6 @@ class _WelcomeViewState extends State<WelcomeView>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: _LanguagePill(
-                        current: session.language,
-                        onChanged: session.setLanguage,
-                      ),
-                    ),
                     const Spacer(),
                     FadeTransition(
                       opacity: fade,
@@ -262,60 +255,6 @@ class _Actions extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Sélecteur FR / WO compact : pastille blanche, langue active en vert.
-class _LanguagePill extends StatelessWidget {
-  const _LanguagePill({required this.current, required this.onChanged});
-
-  final String current;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final code in const ['fr', 'wo'])
-            Semantics(
-              button: true,
-              selected: code == current,
-              label: code == 'fr' ? 'Français' : 'Wolof',
-              excludeSemantics: true,
-              child: GestureDetector(
-                onTap: () => onChanged(code),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 64,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: code == current
-                        ? AppColors.green
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Text(
-                    code.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: code == current ? Colors.white : Ink2.muted,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

@@ -96,7 +96,7 @@ func run(rawPhone, dir string) error {
 		}
 	}
 
-	// 2. Enregistrer chaque image et l'attacher (fr et wo) à la question correspondante.
+	// 2. Enregistrer chaque image et l'attacher (en français) à la question correspondante.
 	qs := questions.NewService(pool)
 	for _, path := range images {
 		rank, err := strconv.Atoi(strings.SplitN(filepath.Base(path), "-", 2)[0])
@@ -113,9 +113,17 @@ func run(rawPhone, dir string) error {
 			return err
 		}
 		in := questions.Input{QuestionType: q.QuestionType, RelatedLessonID: q.RelatedLessonID, Contents: q.Contents, Options: q.Options}
-		for lang, c := range in.Contents {
-			c.ImageMediaID = &mediaID
-			in.Contents[lang] = c
+		fr := in.Contents["fr"]
+		fr.ImageMediaID = &mediaID
+		in.Contents["fr"] = fr
+		// D25 : le wolof ne garde que ses audios.
+		if wo, ok := in.Contents["wo"]; ok {
+			in.Contents["wo"] = questions.Content{AudioMediaID: wo.AudioMediaID, ExplanationAudioMediaID: wo.ExplanationAudioMediaID}
+		}
+		for i := range in.Options {
+			if wo, ok := in.Options[i].Contents["wo"]; ok {
+				in.Options[i].Contents["wo"] = questions.OptionContent{AudioMediaID: wo.AudioMediaID}
+			}
 		}
 		if _, err := qs.Update(ctx, p, q.ID, in); err != nil {
 			return fmt.Errorf("question %d : %w", rank, err)

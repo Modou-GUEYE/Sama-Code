@@ -89,7 +89,7 @@ export function Questions() {
                   <td className="muted">{q.question_type === 'single' ? 'Unique' : 'Multiple'}</td>
                   <td>
                     <span className="badge published">FR</span>{' '}
-                    {q.has_wolof ? <span className="badge published">WO</span> : <span className="badge lang">WO manquant</span>}
+                    {q.has_wolof ? <span className="badge published">Audio wolof</span> : <span className="badge lang">Audio wolof manquant</span>}
                   </td>
                   <td className="muted">{q.series_count}</td>
                   <td>

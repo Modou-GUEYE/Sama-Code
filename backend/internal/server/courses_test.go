@@ -10,7 +10,7 @@ func TestCandidateCourses(t *testing.T) {
 	editor, validator := e.user("editor"), e.user("validator")
 	candidate := e.user("candidate")
 	tr := func(title string) map[string]any {
-		return map[string]any{"fr": map[string]any{"title": title}, "wo": map[string]any{"title": title + " (wo)"}}
+		return map[string]any{"fr": map[string]any{"title": title}}
 	}
 	publish := func(path string) {
 		t.Helper()
@@ -26,21 +26,29 @@ func TestCandidateCourses(t *testing.T) {
 		id := body["id"].(string)
 		editor.do("PUT", "/api/v1/admin/lessons/"+id+"/contents", map[string]any{
 			"fr": []map[string]any{{"content_type": "text", "text": title + " : contenu"}},
-			"wo": []map[string]any{{"content_type": "text", "text": title + " : contenu (wo)"}},
 		})
 		return id
 	}
 
-	_, body := editor.do("POST", "/api/v1/admin/course-categories", map[string]any{"code": "feux", "translations": tr("Les feux")})
+	// D25 : en wolof, pas de titre écrit ni de bloc texte, seulement de l'audio.
+	status, body := editor.do("POST", "/api/v1/admin/course-categories", map[string]any{"code": "x",
+		"translations": map[string]any{"fr": map[string]any{"title": "X"}, "wo": map[string]any{"title": "X (wo)"}}})
+	mustStatus(t, status, body, http.StatusBadRequest, "titre wolof")
+
+	_, body = editor.do("POST", "/api/v1/admin/course-categories", map[string]any{"code": "feux", "translations": tr("Les feux")})
 	cat := body["id"].(string)
 	_, body = editor.do("POST", "/api/v1/admin/courses", map[string]any{"category_id": cat, "translations": tr("Feux tricolores")})
 	course := body["id"].(string)
 	l1, l2, l3 := lesson(course, "Le feu rouge"), lesson(course, "Le feu orange"), lesson(course, "Brouillon")
+	status, body = editor.do("PUT", "/api/v1/admin/lessons/"+l1+"/contents", map[string]any{
+		"wo": []map[string]any{{"content_type": "text", "text": "texte wolof"}},
+	})
+	mustStatus(t, status, body, http.StatusBadRequest, "bloc texte en wolof")
 	publish("/api/v1/admin/lessons/" + l1)
 	publish("/api/v1/admin/lessons/" + l2)
 
 	// Cours encore en brouillon : invisible pour le candidat.
-	status, body := candidate.do("GET", "/api/v1/course-categories", nil)
+	status, body = candidate.do("GET", "/api/v1/course-categories", nil)
 	mustStatus(t, status, body, http.StatusOK, "catalogue")
 	if len(body["items"].([]any)) != 0 {
 		t.Fatalf("un cours non publié est visible : %v", body)
@@ -59,7 +67,7 @@ func TestCandidateCourses(t *testing.T) {
 	mustStatus(t, status, body, http.StatusNotFound, "leçon en brouillon")
 	status, body = candidate.do("GET", "/api/v1/lessons/"+l1, nil)
 	mustStatus(t, status, body, http.StatusOK, "leçon")
-	if body["next_lesson_id"] != l2 || len(body["blocks"].(map[string]any)["wo"].([]any)) != 1 || body["completed"] != false {
+	if body["next_lesson_id"] != l2 || len(body["blocks"].(map[string]any)["fr"].([]any)) != 1 || body["completed"] != false {
 		t.Fatalf("leçon = %v", body)
 	}
 

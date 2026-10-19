@@ -15,7 +15,7 @@ const BLOCK = {
   image: { label: 'Image', Icon: Image },
 }
 
-/** Leçon : titre fr/wo et suite de blocs (texte, audio, image) dans chaque langue. */
+/** Leçon : titre et blocs en français (texte, audio, image) ; en wolof, des audios seulement (D25). */
 export function LessonEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -28,7 +28,7 @@ export function LessonEditor() {
   useEffect(() => {
     if (!lesson) return
     setTranslations(lesson.translations)
-    setBlocks({ fr: lesson.contents?.fr ?? [], wo: lesson.contents?.wo ?? [] })
+    setBlocks({ fr: lesson.contents?.fr ?? [], wo: (lesson.contents?.wo ?? []).filter((b) => b.content_type === 'audio') })
   }, [lesson])
 
   if (error) return <Alert>{error}</Alert>
@@ -94,12 +94,12 @@ export function LessonEditor() {
               value={lang}
               onChange={setLang}
               options={[
-                { value: 'fr', label: `Français (${blocks.fr.length})` },
-                { value: 'wo', label: `Wolof (${blocks.wo.length})` },
+                { value: 'fr', label: `Leçon en français (${blocks.fr.length})` },
+                { value: 'wo', label: `Audios en wolof (${blocks.wo.length})` },
               ]}
             />
             <div className="row">
-              {(['text', 'audio', 'image'] as const).map((t) => (
+              {(lang === 'wo' ? (['audio'] as const) : (['text', 'audio', 'image'] as const)).map((t) => (
                 <button
                   key={t}
                   className="btn secondary small"
@@ -117,7 +117,19 @@ export function LessonEditor() {
               ))}
             </div>
           </div>
-          {list.length === 0 && <div className="empty">Ajoutez des blocs : texte à lire, audio à écouter, illustration.</div>}
+          {lang === 'wo' && (
+            <div className="muted small">
+              Le candidat qui écoute en wolof voit le texte et les images en français, et entend ces audios à la place des audios
+              français.
+            </div>
+          )}
+          {list.length === 0 && (
+            <div className="empty">
+              {lang === 'wo'
+                ? 'Ajoutez l’enregistrement de la leçon en wolof.'
+                : 'Ajoutez des blocs : texte à lire, audio à écouter, illustration.'}
+            </div>
+          )}
           {list.map((b, i) => (
             <div key={i} className="block">
               <div className="stack" style={{ gap: 6 }}>

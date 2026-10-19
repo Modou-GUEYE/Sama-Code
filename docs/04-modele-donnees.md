@@ -44,7 +44,10 @@ Le schéma réel est [backend/migrations/0001_initial_schema.sql](../backend/mig
 Il s'écarte du CDC sur les points suivants :
 
 - **Titres traduits** : `course_category_translations`, `course_translations`,
-  `lesson_translations` (fr / wo + audio). Un illettré doit entendre le nom d'un thème.
+  `lesson_translations` (titre fr ; audio fr et wo). Un illettré doit entendre le nom d'un thème.
+- **Wolof = audio seulement (D25)** : les lignes `wo` des tables `*_translations` et
+  `*_contents` portent un texte vide et des audios ; `lesson_contents` en `wo` ne contient
+  que des blocs `audio`. `users.preferred_language` est la **langue d'écoute**.
 - `license_categories.series_count` (12 pour B, 5 pour C) ajouté.
 - `exam_series` est la série **éditable** (`UNIQUE (license_category_id, series_number)`,
   `current_version`) ; les versions publiées vivent dans `exam_series_snapshots`.
