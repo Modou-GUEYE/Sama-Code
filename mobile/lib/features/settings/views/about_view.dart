@@ -7,147 +7,137 @@ import '../../../core/config.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/animated_road.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 
-/// À propos : à quoi sert l'application, comment elle se lit et s'écoute, contacts,
-/// version, licences des logiciels utilisés et éditeur.
+/// À propos, dans le style de l'écran de bienvenue : logo, trois icônes (lire,
+/// écouter, voir), route animée, contacts en gros boutons, puis éditeur et version.
+/// Tient dans l'écran ; défile seulement sur un petit écran ou en grande police.
 class AboutView extends StatelessWidget {
   const AboutView({super.key});
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SessionViewModel>().strings;
+    final phone = AppConfig.contactPhone;
 
     return Scaffold(
       body: GradientBackground(
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  iconSize: 30,
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  icon: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: Ink2.strong,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ),
-              const Center(child: AppLogo(size: 120)),
-              const SizedBox(height: 10),
-              Text(
-                s.t('about_mission'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  height: 1.4,
-                  color: Ink2.strong,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SoftCard(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  children: [
-                    _Point(
-                      icon: Icons.menu_book_rounded,
-                      color: AppColors.green,
-                      text: s.t('about_read'),
-                    ),
-                    _Point(
-                      icon: Icons.headphones_rounded,
-                      color: AppColors.orange,
-                      text: s.t('about_listen'),
-                    ),
-                    _Point(
-                      icon: Icons.image_rounded,
-                      color: AppColors.greenDark,
-                      text: s.t('about_images'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              SoftCard(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                child: Column(
-                  children: [
-                    Text(
-                      s.t('contact_us'),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Ink2.strong,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _ContactButton(
-                          icon: Icons.mail_outline_rounded,
-                          label: s.t('email'),
-                          semanticLabel:
-                              '${s.t('email')} : ${AppConfig.contactEmail}',
-                          color: AppColors.greenDark,
-                          onTap: () => _open(
-                            context,
-                            Uri(scheme: 'mailto', path: AppConfig.contactEmail),
-                          ),
-                        ),
-                        if (AppConfig.contactPhone.isNotEmpty) ...[
-                          _ContactButton(
-                            icon: Icons.call_rounded,
-                            label: s.t('call'),
-                            semanticLabel:
-                                '${s.t('call')} : ${_formatPhone(AppConfig.contactPhone)}',
-                            color: AppColors.green,
-                            onTap: () => _open(
-                              context,
-                              Uri(scheme: 'tel', path: AppConfig.contactPhone),
-                            ),
-                          ),
-                          _ContactButton(
-                            icon: Icons.chat_rounded,
-                            label: s.t('whatsapp'),
-                            semanticLabel:
-                                '${s.t('whatsapp')} : ${_formatPhone(AppConfig.contactPhone)}',
-                            color: const Color(0xFF25A244),
-                            onTap: () => _open(
-                              context,
-                              Uri.https(
-                                'wa.me',
-                                AppConfig.contactPhone.replaceAll('+', ''),
+        child: Stack(
+          children: [
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, box) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: box.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: IconButton(
+                                iconSize: 30,
+                                tooltip: MaterialLocalizations.of(context)
+                                    .backButtonTooltip,
+                                icon: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  color: Ink2.strong,
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
                               ),
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      [
-                        AppConfig.contactEmail,
-                        if (AppConfig.contactPhone.isNotEmpty)
-                          _formatPhone(AppConfig.contactPhone),
-                      ].join(', '),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        height: 1.4,
-                        color: Ink2.muted,
+                            const Spacer(),
+                            Semantics(
+                              label: s.t('about_mission'),
+                              excludeSemantics: true,
+                              child: const Center(child: AppLogo(size: 200)),
+                            ),
+                            const SizedBox(height: 28),
+                            Row(
+                              children: [
+                                _Feature(
+                                  icon: Icons.menu_book_rounded,
+                                  color: AppColors.green,
+                                  label: s.t('about_read_short'),
+                                  semanticLabel: s.t('about_read'),
+                                ),
+                                _Feature(
+                                  icon: Icons.headphones_rounded,
+                                  color: AppColors.orange,
+                                  label: s.t('about_listen_short'),
+                                  semanticLabel: s.t('about_listen'),
+                                ),
+                                _Feature(
+                                  icon: Icons.image_rounded,
+                                  color: AppColors.greenDark,
+                                  label: s.t('about_images_short'),
+                                  semanticLabel: s.t('about_images'),
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            // La route passe entre les icônes et les contacts.
+                            const SizedBox(height: 170, child: AnimatedRoad()),
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                _ContactButton(
+                                  icon: Icons.mail_rounded,
+                                  label: s.t('email'),
+                                  semanticLabel:
+                                      '${s.t('email')} : ${AppConfig.contactEmail}',
+                                  onTap: () => _open(
+                                    context,
+                                    Uri(
+                                      scheme: 'mailto',
+                                      path: AppConfig.contactEmail,
+                                    ),
+                                  ),
+                                ),
+                                if (phone.isNotEmpty) ...[
+                                  const SizedBox(width: 10),
+                                  _ContactButton(
+                                    icon: Icons.call_rounded,
+                                    label: s.t('call'),
+                                    semanticLabel:
+                                        '${s.t('call')} : ${_formatPhone(phone)}',
+                                    onTap: () => _open(
+                                      context,
+                                      Uri(scheme: 'tel', path: phone),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  _ContactButton(
+                                    icon: Icons.chat_rounded,
+                                    label: s.t('whatsapp'),
+                                    semanticLabel:
+                                        '${s.t('whatsapp')} : ${_formatPhone(phone)}',
+                                    onTap: () => _open(
+                                      context,
+                                      Uri.https(
+                                        'wa.me',
+                                        phone.replaceAll('+', ''),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            _Footer(strings: s),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              _Footer(strings: s),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -170,56 +160,72 @@ class AboutView extends StatelessWidget {
   }
 }
 
-/// Une ligne « ce que propose l'application » : icône dans une pastille + texte.
-class _Point extends StatelessWidget {
-  const _Point({required this.icon, required this.color, required this.text});
+/// Ce que propose l'application : icône ronde et un mot (lire, écouter, voir).
+class _Feature extends StatelessWidget {
+  const _Feature({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.semanticLabel,
+  });
 
   final IconData icon;
   final Color color;
-  final String text;
+  final String label;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+    return Expanded(
+      child: Semantics(
+        label: semanticLabel,
+        excludeSemantics: true,
+        child: Column(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.18),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Icon(icon, size: 32, color: color),
             ),
-            child: Icon(icon, size: 24, color: color),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 15, color: Ink2.strong),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Ink2.strong,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Gros bouton rond de contact, icône + libellé court dessous.
+/// Bouton de contact : pastille blanche, icône verte au-dessus d'un mot court.
 class _ContactButton extends StatelessWidget {
   const _ContactButton({
     required this.icon,
     required this.label,
     required this.semanticLabel,
-    required this.color,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String semanticLabel;
-  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -229,32 +235,29 @@ class _ContactButton extends StatelessWidget {
         button: true,
         label: semanticLabel,
         excludeSemantics: true,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Column(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(22),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Column(
+                children: [
+                  Icon(icon, size: 30, color: AppColors.green),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Ink2.strong,
+                    ),
                   ),
-                  child: Icon(icon, size: 30, color: color),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Ink2.strong,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

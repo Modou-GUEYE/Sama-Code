@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../../../core/localization/app_strings.dart';
 import '../../../core/session_viewmodel.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../shared/widgets/auth_scaffold.dart';
 import '../../../shared/widgets/feedback.dart';
+import '../../../shared/widgets/animated_road.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../viewmodels/auth_flow_viewmodel.dart';
 import 'auth_navigation.dart';
@@ -24,11 +24,7 @@ class WelcomeView extends StatefulWidget {
 }
 
 class _WelcomeViewState extends State<WelcomeView>
-    with TickerProviderStateMixin {
-  late final _road = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 9),
-  );
+    with SingleTickerProviderStateMixin {
   late final _intro = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
@@ -38,17 +34,14 @@ class _WelcomeViewState extends State<WelcomeView>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (MediaQuery.disableAnimationsOf(context)) {
-      _road.value = 0.35;
       _intro.value = 1;
-    } else {
-      if (!_road.isAnimating) _road.repeat();
-      if (_intro.value == 0) _intro.forward();
+    } else if (_intro.value == 0) {
+      _intro.forward();
     }
   }
 
   @override
   void dispose() {
-    _road.dispose();
     _intro.dispose();
     super.dispose();
   }
@@ -68,7 +61,7 @@ class _WelcomeViewState extends State<WelcomeView>
       body: GradientBackground(
         child: Stack(
           children: [
-            Positioned.fill(child: CustomPaint(painter: _RoadPainter(_road))),
+            const Positioned.fill(child: AnimatedRoad()),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
@@ -110,104 +103,6 @@ class _WelcomeViewState extends State<WelcomeView>
       ),
     );
   }
-}
-
-/// Route courbe en vert pâle, ligne médiane blanche qui défile, petite voiture.
-class _RoadPainter extends CustomPainter {
-  _RoadPainter(this.progress) : super(repaint: progress);
-
-  final Animation<double> progress;
-
-  static const _dash = 22.0;
-  static const _gap = 20.0;
-  static const _roadWidth = 78.0;
-
-  Path _path(Size size) => Path()
-    ..moveTo(-60, size.height * 0.80)
-    ..cubicTo(
-      size.width * 0.30,
-      size.height * 0.62,
-      size.width * 0.70,
-      size.height * 1.02,
-      size.width + 60,
-      size.height * 0.84,
-    );
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = _path(size);
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = AppColors.green.withValues(alpha: 0.10)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _roadWidth,
-    );
-
-    final metric = path.computeMetrics().first;
-    final dashPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
-    // Les pointillés reculent pendant que la voiture avance : effet de mouvement.
-    final period = _dash + _gap;
-    var start = -(progress.value * metric.length * 2) % period - period;
-    for (; start < metric.length; start += period) {
-      final from = start.clamp(0.0, metric.length);
-      final to = (start + _dash).clamp(0.0, metric.length);
-      if (to > from) canvas.drawPath(metric.extractPath(from, to), dashPaint);
-    }
-
-    // Petite voiture vue du dessus, sur la voie de droite, orientée selon la route.
-    final tangent = metric.getTangentForOffset(progress.value * metric.length);
-    if (tangent == null) return;
-    final lane = Offset(-tangent.vector.dy, tangent.vector.dx) * 17;
-    canvas
-      ..save()
-      ..translate(tangent.position.dx + lane.dx, tangent.position.dy + lane.dy)
-      ..rotate(-tangent.angle);
-    _paintCar(canvas);
-    canvas.restore();
-  }
-
-  /// Voiture de 36 × 18, avant tourné vers +x, centrée sur l'origine.
-  static void _paintCar(Canvas canvas) {
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-17, -8, 36, 18),
-        const Radius.circular(6),
-      ),
-      Paint()..color = const Color(0x22000000),
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-18, -9, 36, 18),
-        const Radius.circular(6),
-      ),
-      Paint()..color = AppColors.orange,
-    );
-    final glass = Paint()..color = const Color(0xFF3B4A54);
-    // Pare-brise (avant) et lunette arrière.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(3, -6.5, 7, 13),
-        const Radius.circular(2.5),
-      ),
-      glass,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-13, -6, 5, 12),
-        const Radius.circular(2),
-      ),
-      glass,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_RoadPainter oldDelegate) => false;
 }
 
 class _Actions extends StatelessWidget {

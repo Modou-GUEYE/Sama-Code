@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -351,63 +353,71 @@ class _LogoutTile extends StatelessWidget {
             context: context,
             showDragHandle: true,
             backgroundColor: Colors.white,
-            builder: (context) => Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(
-                    Icons.logout_rounded,
-                    size: 44,
-                    color: AppColors.red,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    s.t('logout_confirm'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: _ink,
+            // SafeArea : les boutons restent au-dessus de la barre de navigation.
+            builder: (context) => SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(
+                      Icons.logout_rounded,
+                      size: 44,
+                      color: AppColors.red,
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.background,
-                            foregroundColor: _ink,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            textStyle: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: _OneLine(s.t('cancel')),
-                        ),
+                    const SizedBox(height: 12),
+                    Text(
+                      s.t('logout_confirm'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: _ink,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.red,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            textStyle: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.background,
+                              foregroundColor: _ink,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: _OneLine(s.t('cancel')),
                           ),
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: _OneLine(s.t('logout')),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.red,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: _OneLine(s.t('logout')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -634,7 +644,12 @@ class _EditNameSheetState extends State<_EditNameSheet> {
         24,
         0,
         24,
-        24 + MediaQuery.viewInsetsOf(context).bottom,
+        // Clavier ouvert : au-dessus du clavier ; sinon au-dessus de la barre du téléphone.
+        24 +
+            math.max(
+              MediaQuery.viewInsetsOf(context).bottom,
+              MediaQuery.viewPaddingOf(context).bottom,
+            ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

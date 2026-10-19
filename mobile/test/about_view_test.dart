@@ -41,7 +41,9 @@ Future<void> pumpAbout(WidgetTester tester) async {
       child: MaterialApp(theme: buildAppTheme(), home: const AboutView()),
     ),
   );
-  await tester.pumpAndSettle();
+  // La route est animée en continu : pas de pumpAndSettle.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500));
 }
 
 void main() {
@@ -50,7 +52,13 @@ void main() {
     expect(find.text('E-mail'), findsOneWidget);
     expect(find.text('Appeler'), findsOneWidget);
     expect(find.text('WhatsApp'), findsOneWidget);
-    expect(find.text('info@samacode.com, 77 353 13 77'), findsOneWidget);
+    expect(find.text('Lire'), findsOneWidget);
+    expect(find.text('Écouter'), findsOneWidget);
+    expect(find.text('Voir'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('WhatsApp : 77 353 13 77'),
+      findsOneWidget,
+    );
     expect(
       find.text('Une application éditée par Sama Code. Version 1.0.0'),
       findsOneWidget,
