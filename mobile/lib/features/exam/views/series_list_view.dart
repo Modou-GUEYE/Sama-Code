@@ -156,9 +156,16 @@ class _SeriesTile extends StatelessWidget {
               ],
             ),
             if (series.bestFaults != null)
-              Text(
-                '${s.t('best_result')} : ${series.bestFaults} ${series.bestFaults! > 1 ? s.t('faults') : s.t('fault')}',
-                style: const TextStyle(fontSize: 13, color: Ink2.muted),
+              // Une seule ligne : le texte rétrécit s'il manque de place.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${s.t('best_result')} : ${series.bestFaults} ${series.bestFaults! > 1 ? s.t('faults') : s.t('fault')}',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: const TextStyle(fontSize: 13, color: Ink2.muted),
+                ),
               ),
           ],
         ),
