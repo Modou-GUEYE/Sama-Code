@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Plus, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { QuestionSummary, SeriesDetail, SeriesQuestion, Status } from '../api/types'
@@ -77,7 +78,7 @@ export function SeriesEditor() {
           <>
             <StatusBadge status={series.status} />
             <button className="btn ghost" onClick={() => navigate('/series')}>
-              Retour
+              <ArrowLeft size={16} /> Retour
             </button>
           </>
         }
@@ -112,7 +113,7 @@ export function SeriesEditor() {
               <div className="row" style={{ gap: 2 }}>
                 {q.status !== 'published' && <StatusBadge status={q.status} />}
                 <button className="btn ghost small icon-only" title="Monter" disabled={i === 0} onClick={() => move(i, -1)}>
-                  ↑
+                  <ArrowUp size={16} />
                 </button>
                 <button
                   className="btn ghost small icon-only"
@@ -120,10 +121,10 @@ export function SeriesEditor() {
                   disabled={i === items.length - 1}
                   onClick={() => move(i, 1)}
                 >
-                  ↓
+                  <ArrowDown size={16} />
                 </button>
                 <button className="btn ghost small icon-only" title="Retirer" onClick={() => update(items.filter((_, j) => j !== i))}>
-                  ✕
+                  <X size={16} />
                 </button>
               </div>
             </div>
@@ -154,7 +155,15 @@ export function SeriesEditor() {
                   update([...items, { question_id: q.id, text_fr: q.text_fr, status: q.status, question_type: q.question_type }])
                 }
               >
-                {inSeries.has(q.id) ? 'Ajoutée' : 'Ajouter'}
+                {inSeries.has(q.id) ? (
+                  <>
+                    <Check size={15} /> Ajoutée
+                  </>
+                ) : (
+                  <>
+                    <Plus size={15} strokeWidth={2.4} /> Ajouter
+                  </>
+                )}
               </button>
             </div>
           ))}

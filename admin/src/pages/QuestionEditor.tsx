@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Lang, Option, Question, QuestionContent, Status } from '../api/types'
@@ -126,7 +127,7 @@ export function QuestionEditor() {
           <>
             {meta && <StatusBadge status={meta.status} />}
             <button className="btn ghost" onClick={() => navigate('/questions')}>
-              Retour
+              <ArrowLeft size={16} /> Retour
             </button>
           </>
         }
@@ -234,13 +235,13 @@ export function QuestionEditor() {
                 disabled={draft.options.length <= 2}
                 onClick={() => removeOption(i)}
               >
-                ✕
+                <Trash2 size={16} />
               </button>
             </div>
           ))}
           {draft.options.length < CODES.length && (
             <button type="button" className="btn secondary small" style={{ alignSelf: 'flex-start' }} onClick={addOption}>
-              + Ajouter une proposition
+              <Plus size={15} strokeWidth={2.4} /> Ajouter une proposition
             </button>
           )}
         </div>

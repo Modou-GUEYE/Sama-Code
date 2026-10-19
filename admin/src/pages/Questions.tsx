@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { QuestionSummary, Status } from '../api/types'
@@ -30,7 +31,7 @@ export function Questions() {
         subtitle="Banque de questions utilisée par les séries d’examen et l’entraînement."
         actions={
           <button className="btn" onClick={() => navigate('/questions/new')}>
-            + Nouvelle question
+            <Plus size={18} strokeWidth={2.4} /> Nouvelle question
           </button>
         }
       />
@@ -105,13 +106,13 @@ export function Questions() {
       {pages > 1 && (
         <div className="row" style={{ justifyContent: 'center', marginTop: 16 }}>
           <button className="btn secondary small" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-            ← Précédent
+            <ChevronLeft size={16} /> Précédent
           </button>
           <span className="muted">
             Page {page} / {pages}
           </span>
           <button className="btn secondary small" disabled={page >= pages} onClick={() => setPage(page + 1)}>
-            Suivant →
+            Suivant <ChevronRight size={16} />
           </button>
         </div>
       )}

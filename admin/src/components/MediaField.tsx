@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Image, Upload, Volume2, X } from 'lucide-react'
 import { api, errorMessage } from '../api/client'
 import type { MediaAsset } from '../api/types'
 
@@ -50,7 +51,7 @@ export function MediaField({
   return (
     <div className="stack" style={{ gap: 4 }}>
       <div className="media-field">
-        <span style={{ width: 22, textAlign: 'center' }}>{kind === 'image' ? '🖼️' : '🔊'}</span>
+        <span className="media-icon">{kind === 'image' ? <Image size={18} /> : <Volume2 size={18} />}</span>
         {value ? (
           kind === 'image' ? (
             <img src={mediaUrl(value)} alt="" />
@@ -64,11 +65,12 @@ export function MediaField({
         )}
         <span style={{ flex: value ? 1 : 0 }} />
         <button type="button" className="btn secondary small" disabled={busy} onClick={() => input.current?.click()}>
+          <Upload size={15} strokeWidth={2.4} />
           {busy ? 'Envoi…' : value ? 'Remplacer' : 'Ajouter'}
         </button>
         {value && (
           <button type="button" className="btn ghost small icon-only" title="Retirer" onClick={() => onChange(null)}>
-            ✕
+            <X size={16} />
           </button>
         )}
         <input

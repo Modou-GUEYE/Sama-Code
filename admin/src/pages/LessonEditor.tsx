@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowDown, ArrowLeft, ArrowUp, Image, Plus, Trash2, Type, Volume2 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Block, Lang, Lesson, Status, Translations } from '../api/types'
@@ -7,7 +8,11 @@ import { StatusActions } from '../components/StatusActions'
 import { cleanTranslations, TranslationFields } from '../components/TranslationFields'
 import { Alert, Loading, PageHead, StatusBadge, Tabs, useAction, useLoad } from '../components/ui'
 
-const BLOCK_LABEL = { text: '📝 Texte', audio: '🔊 Audio', image: '🖼️ Image' }
+const BLOCK = {
+  text: { label: 'Texte', Icon: Type },
+  audio: { label: 'Audio', Icon: Volume2 },
+  image: { label: 'Image', Icon: Image },
+}
 
 /** Leçon : titre fr/wo et suite de blocs (texte, audio, image) dans chaque langue. */
 export function LessonEditor() {
@@ -67,7 +72,7 @@ export function LessonEditor() {
           <>
             <StatusBadge status={lesson.status} />
             <button className="btn ghost" onClick={() => navigate(`/courses/${lesson.course_id}`)}>
-              Retour au cours
+              <ArrowLeft size={16} /> Retour au cours
             </button>
           </>
         }
@@ -94,7 +99,14 @@ export function LessonEditor() {
                   className="btn secondary small"
                   onClick={() => setList([...list, { content_type: t, text: t === 'text' ? '' : null, media_id: null }])}
                 >
-                  + {BLOCK_LABEL[t]}
+                  {(() => {
+                    const { Icon, label } = BLOCK[t]
+                    return (
+                      <>
+                        <Plus size={15} strokeWidth={2.4} /> <Icon size={15} /> {label}
+                      </>
+                    )
+                  })()}
                 </button>
               ))}
             </div>
@@ -104,7 +116,7 @@ export function LessonEditor() {
             <div key={i} className="block">
               <div className="stack" style={{ gap: 6 }}>
                 <span className="small muted">
-                  {i + 1}. {BLOCK_LABEL[b.content_type]}
+                  {i + 1}. {BLOCK[b.content_type].label}
                 </span>
                 {b.content_type === 'text' ? (
                   <textarea
@@ -119,7 +131,7 @@ export function LessonEditor() {
               </div>
               <div className="stack" style={{ gap: 2 }}>
                 <button className="btn ghost small icon-only" disabled={i === 0} onClick={() => move(i, -1)} title="Monter">
-                  ↑
+                  <ArrowUp size={16} />
                 </button>
                 <button
                   className="btn ghost small icon-only"
@@ -127,10 +139,10 @@ export function LessonEditor() {
                   onClick={() => move(i, 1)}
                   title="Descendre"
                 >
-                  ↓
+                  <ArrowDown size={16} />
                 </button>
                 <button className="btn ghost small icon-only" onClick={() => setList(list.filter((_, j) => j !== i))} title="Supprimer">
-                  ✕
+                  <Trash2 size={16} />
                 </button>
               </div>
             </div>

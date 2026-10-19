@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pencil, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Course, CourseCategory, Translations } from '../api/types'
@@ -39,7 +40,7 @@ export function Courses() {
         subtitle="Thèmes → cours → leçons, à lire ou à écouter en français et en wolof."
         actions={
           <button className="btn secondary" onClick={() => setEditing('new')}>
-            + Nouveau thème
+            <Plus size={16} strokeWidth={2.4} /> Nouveau thème
           </button>
         }
       />
@@ -94,10 +95,10 @@ export function Courses() {
                 </div>
                 <div className="row">
                   <button className="btn ghost small" onClick={() => setEditing(category)}>
-                    Modifier le thème
+                    <Pencil size={15} /> Modifier le thème
                   </button>
                   <button className="btn small" disabled={action.busy} onClick={() => void createCourse()}>
-                    + Nouveau cours
+                    <Plus size={16} strokeWidth={2.4} /> Nouveau cours
                   </button>
                 </div>
               </div>

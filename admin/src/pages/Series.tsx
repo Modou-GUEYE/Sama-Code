@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { License, Series as SeriesT, SeriesDetail } from '../api/types'
@@ -81,7 +82,7 @@ export function Series() {
                   </>
                 ) : (
                   <div className="small" style={{ marginTop: 8 }}>
-                    + Créer la série
+                    <Plus size={14} strokeWidth={2.4} style={{ verticalAlign: '-2px' }} /> Créer la série
                   </div>
                 )}
               </button>

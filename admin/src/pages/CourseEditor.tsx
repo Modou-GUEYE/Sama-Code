@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowLeft, Plus } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Course, CourseCategory, Lesson, License, Status, Translations } from '../api/types'
@@ -64,7 +65,7 @@ export function CourseEditor() {
           <>
             <StatusBadge status={course.status} />
             <button className="btn ghost" onClick={() => navigate('/courses')}>
-              Retour
+              <ArrowLeft size={16} /> Retour
             </button>
           </>
         }
@@ -107,7 +108,7 @@ export function CourseEditor() {
           <div className="row between">
             <h2>Leçons</h2>
             <button className="btn secondary small" disabled={action.busy} onClick={() => void addLesson()}>
-              + Nouvelle leçon
+              <Plus size={16} strokeWidth={2.4} /> Nouvelle leçon
             </button>
           </div>
           {course.lessons?.length ? (
