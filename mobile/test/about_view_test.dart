@@ -47,12 +47,14 @@ Future<void> pumpAbout(WidgetTester tester) async {
 void main() {
   testWidgets('à propos : contacts, version et éditeur', (tester) async {
     await pumpAbout(tester);
-    expect(find.text('info@samacode.com'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Une application éditée par'), 300);
+    expect(find.text('E-mail'), findsOneWidget);
     expect(find.text('Appeler'), findsOneWidget);
     expect(find.text('WhatsApp'), findsOneWidget);
-    expect(find.text('77 353 13 77'), findsNWidgets(2));
-    expect(find.text('1.0.0'), findsOneWidget);
-    expect(find.text('Sama Code'), findsOneWidget);
+    expect(find.text('info@samacode.com, 77 353 13 77'), findsOneWidget);
+    expect(
+      find.text('Une application éditée par Sama Code. Version 1.0.0'),
+      findsOneWidget,
+    );
+    expect(find.text('Licences des logiciels'), findsOneWidget);
   });
 }

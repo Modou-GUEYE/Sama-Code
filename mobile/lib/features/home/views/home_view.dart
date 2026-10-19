@@ -49,10 +49,10 @@ class _HomeBody extends StatelessWidget {
           child: RefreshIndicator(
             onRefresh: () => Future.wait([vm.load(), session.reloadUser()]),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
               children: [
                 _Header(name: session.user?.displayName, strings: s),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 if (vm.currentExam != null)
                   _ResumeBanner(
                     exam: vm.currentExam!,
@@ -68,7 +68,7 @@ class _HomeBody extends StatelessWidget {
                   )
                 else
                   _HeroBanner(strings: s),
-                const SizedBox(height: 28),
+                const SizedBox(height: 22),
                 _SectionTitle(s.t('learn')),
                 Row(
                   children: [
@@ -104,7 +104,7 @@ class _HomeBody extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 22),
                 _SectionTitle(
                   s.t('exam'),
                   subtitle: s.t('exam_choose_license'),
@@ -136,7 +136,7 @@ class _HomeBody extends StatelessWidget {
                         await vm.load();
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                   ],
                 _MyExamsCard(
                   strings: s,
@@ -241,7 +241,7 @@ class _HeroBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = strings;
     return Container(
-      padding: const EdgeInsets.fromLTRB(22, 22, 12, 22),
+      padding: const EdgeInsets.fromLTRB(22, 18, 12, 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
@@ -276,7 +276,7 @@ class _HeroBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Icon(
             Icons.traffic_rounded,
-            size: 72,
+            size: 60,
             color: Colors.white.withValues(alpha: 0.9),
           ),
         ],
@@ -294,7 +294,7 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -340,20 +340,20 @@ class _FeatureTile extends StatelessWidget {
       excludeSemantics: true,
       child: SoftCard(
         onTap: onTap,
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, size: 32, color: color),
+              child: Icon(icon, size: 28, color: color),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             Text(
               label,
               style: const TextStyle(
@@ -400,12 +400,12 @@ class _LicenseCard extends StatelessWidget {
       excludeSemantics: true,
       child: SoftCard(
         onTap: onTap,
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         child: Row(
           children: [
             Container(
-              width: 60,
-              height: 60,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(18),
@@ -414,7 +414,7 @@ class _LicenseCard extends StatelessWidget {
                 isTruck
                     ? Icons.local_shipping_rounded
                     : Icons.directions_car_rounded,
-                size: 34,
+                size: 30,
                 color: Colors.white,
               ),
             ),
@@ -471,19 +471,19 @@ class _MyExamsCard extends StatelessWidget {
       excludeSemantics: true,
       child: SoftCard(
         onTap: onTap,
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         child: Row(
           children: [
             Container(
-              width: 60,
-              height: 60,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 color: Ink2.strong.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Icon(
                 Icons.history_rounded,
-                size: 34,
+                size: 30,
                 color: Ink2.strong,
               ),
             ),
