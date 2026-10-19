@@ -12,6 +12,7 @@ import (
 	"samacode/backend/internal/admin"
 	"samacode/backend/internal/auth"
 	"samacode/backend/internal/courses"
+	"samacode/backend/internal/examengine"
 	"samacode/backend/internal/examseries"
 	"samacode/backend/internal/httpx"
 	"samacode/backend/internal/licenses"
@@ -59,6 +60,7 @@ func NewRouter(d Deps) http.Handler {
 			r.Use(d.Tokens.Middleware)
 			users.NewHandler(d.DB).Routes(r)
 			licenses.NewHandler(d.DB).Routes(r)
+			examengine.NewHandler(examengine.NewService(d.DB)).Routes(r)
 
 			// Administration des contenus : éditeurs, validateurs et administrateurs.
 			// Les droits fins (publier, gérer les comptes) sont vérifiés plus bas ou dans les services.
