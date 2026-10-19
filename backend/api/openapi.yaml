@@ -2,20 +2,7 @@ openapi: 3.1.0
 info:
   title: Sama Code API
   version: 0.3.0
-  description: |
-    API REST de Sama Code : apprentissage du Code de la route au Sénégal.
-
-    - Toutes les routes sont préfixées par `/api/v1` (sauf `/healthz`), en JSON (sauf l'envoi de fichiers).
-    - Toutes les erreurs suivent le format `{"error": {"code", "message", "details"}}` ;
-      `message` est en français et affichable tel quel, `code` est stable.
-    - Un corps JSON est limité à 1 Mo et les champs inconnus sont refusés (`400 invalid_json`).
-    - Un identifiant mal formé dans l'URL vaut « introuvable » (`404 not_found`).
-    - Une ressource d'un autre candidat répond `404` (on ne révèle pas son existence).
-    - Langues : `fr` et `wo`. Le wolof est **uniquement audio** (D25) : tout texte wolof est
-      refusé (`400 validation_error`) ; dans les réponses, `text` vaut `""` pour `wo`.
-    - Les bonnes réponses (`is_correct`, `correct_option_ids`) et les explications ne sont
-      jamais envoyées au candidat avant la soumission d'un examen ou la correction d'une
-      question d'entraînement.
+  description: API REST de Sama Code, apprentissage du Code de la route au Sénégal.
 servers:
   - url: http://localhost:8080/api/v1
 
