@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"samacode/backend/api"
 	"samacode/backend/internal/admin"
 	"samacode/backend/internal/auth"
 	"samacode/backend/internal/courses"
@@ -28,6 +29,8 @@ type Deps struct {
 	Auth              *auth.Service
 	Media             media.Storage
 	TrustProxyHeaders bool
+	// Docs sert la documentation Swagger sur /docs (désactivée en production par défaut).
+	Docs bool
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -47,6 +50,10 @@ func NewRouter(d Deps) http.Handler {
 		}
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
+
+	if d.Docs {
+		r.Route("/docs", api.DocsRoutes)
+	}
 
 	r.Route("/api/v1", func(r chi.Router) {
 		// 10 requêtes d'affilée par IP, puis 1 toutes les 6 s : en complément des quotas par numéro.

@@ -24,6 +24,7 @@ createdb samacode && createdb samacode_test   # une seule fois (PostgreSQL local
 cd backend
 cp .env.example .env                          # puis remplacer les secrets
 make run                                      # API sur http://localhost:8080
+# Documentation Swagger de l'API : http://localhost:8080/docs/ (contrat : backend/api/openapi.yaml)
 make test                                     # tests unitaires + intégration
 ```
 

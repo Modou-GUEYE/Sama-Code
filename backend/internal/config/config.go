@@ -15,6 +15,7 @@ type Config struct {
 	DatabaseURL       string
 	AutoMigrate       bool
 	TrustProxyHeaders bool // lire X-Forwarded-For (uniquement derrière un reverse proxy de confiance)
+	DocsEnabled       bool // documentation Swagger sur /docs (par défaut : hors production)
 	JWTSecret         []byte
 	OTPSecret         []byte
 	SMSProvider       string // log (dev) | … (à choisir, Q12)
@@ -42,6 +43,9 @@ func Load() (Config, error) {
 		errs = append(errs, err)
 	}
 	if c.TrustProxyHeaders, err = boolEnv("TRUST_PROXY_HEADERS", false); err != nil {
+		errs = append(errs, err)
+	}
+	if c.DocsEnabled, err = boolEnv("API_DOCS", !c.IsProduction()); err != nil {
 		errs = append(errs, err)
 	}
 	if c.AccessTokenTTL, err = durationEnv("ACCESS_TOKEN_TTL", 15*time.Minute); err != nil {

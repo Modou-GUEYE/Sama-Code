@@ -77,6 +77,7 @@ func run() error {
 			Auth:              authSvc,
 			Media:             mediaStorage,
 			TrustProxyHeaders: cfg.TrustProxyHeaders,
+			Docs:              cfg.DocsEnabled,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,

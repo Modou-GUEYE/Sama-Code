@@ -1,7 +1,11 @@
 # 05 — Contrat API REST
 
-Préfixe `/api/v1`, JSON (sauf upload de fichiers). À formaliser dans
-`backend/api/openapi.yaml`.
+Préfixe `/api/v1`, JSON (sauf upload de fichiers).
+
+> **Contrat OpenAPI** : [backend/api/openapi.yaml](../backend/api/openapi.yaml) décrit chaque
+> route en détail (paramètres, corps, réponses, erreurs). Il est vérifié par un test qui le
+> compare aux routes réelles, et consultable sur `http://localhost:8080/docs/` en développement.
+> Ce document-ci en donne la vue d'ensemble.
 
 ## Authentification et profil
 
@@ -20,26 +24,24 @@ Préfixe `/api/v1`, JSON (sauf upload de fichiers). À formaliser dans
 
 ## Cours et médias
 
-Toutes ces routes exigent un compte connecté (D19).
+Toutes ces routes exigent un compte connecté (D19), sauf le fichier d'un média.
 
 | Méthode | Endpoint | Rôle |
 |---|---|---|
-| GET | `/course-categories` | Lister les thèmes |
-| GET | `/courses` | Lister les cours publiés |
-| GET | `/courses/{courseId}` | Consulter un cours |
-| GET | `/lessons/{lessonId}` | Leçon + contenus (texte, audio, images) |
-| GET | `/media/{mediaId}` | Infos d'un média autorisé (URL signée) |
-| POST | `/lessons/{lessonId}/completion` | Marquer une leçon terminée |
+| GET | `/course-categories` | Thèmes contenant des cours publiés, avec leurs cours et la progression du candidat |
+| GET | `/courses/{id}` | Cours publié et ses leçons publiées (terminées ou non) |
+| GET | `/lessons/{id}` | Leçon : titres, blocs par langue (texte et images en `fr`, audios en `fr` et `wo`), leçon suivante |
+| POST | `/lessons/{id}/completion` | Marquer une leçon terminée (idempotent) |
+| GET | `/media/{id}/file` | Fichier d'un média (audio, image), public, avec prise en charge de `Range` |
 
 ## Permis et séries
 
 | Méthode | Endpoint | Rôle |
 |---|---|---|
 | GET | `/license-categories` | Lister les catégories de permis |
-| GET | `/license-categories/{id}/series` | Séries publiées d'une catégorie |
-| GET | `/exam-series/{id}` | Infos d'une série |
-| GET | `/exam-series/{id}/questions` | Questions (entraînement), **sans** bonnes réponses |
-| POST | `/exam-series/{id}/questions/{questionId}/check` | Entraînement : valider une réponse, renvoie correction + explication de **cette** question uniquement |
+| GET | `/license-categories/{id}/series` | Séries publiées d'une catégorie, avec les statistiques du candidat |
+
+Les questions d'une série pour l'entraînement passent par `/practice/...` (ci-dessous).
 
 ## Entraînement (implémenté)
 
@@ -61,6 +63,7 @@ Toutes ces routes exigent un compte connecté (D19).
 | GET | `/exam-sessions/{id}/result` | Résultat (après soumission) |
 | GET | `/exam-sessions/{id}/review` | Corrections (après soumission) |
 | GET | `/exam-sessions` | Historique de ses tentatives (paginé) |
+| GET | `/exam-sessions/current` | Examen en cours du candidat (404 s'il n'y en a pas) |
 | GET *(V2, D24)* | `/exam-series/{id}/offline-package` | Télécharger l'instantané pour l'examen hors ligne |
 | POST *(V2, D24)* | `/sync/exam-sessions` | Envoyer des sessions passées hors ligne (idempotent via `client_session_id`) ; le serveur recalcule et renvoie les résultats officiels |
 

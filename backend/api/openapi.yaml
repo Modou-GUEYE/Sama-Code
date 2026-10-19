@@ -1,20 +1,91 @@
 openapi: 3.1.0
 info:
   title: Sama Code API
-  version: 0.1.0
+  version: 0.3.0
   description: |
-    API REST de Sama Code. Phase 2 : authentification par téléphone, profil, catégories de permis.
-    Toutes les erreurs suivent le format `{"error": {"code", "message", "details"}}` ;
-    `message` est en français et affichable tel quel, `code` est stable.
+    API REST de Sama Code : apprentissage du Code de la route au Sénégal.
+
+    - Toutes les routes sont préfixées par `/api/v1` (sauf `/healthz`), en JSON (sauf l'envoi de fichiers).
+    - Toutes les erreurs suivent le format `{"error": {"code", "message", "details"}}` ;
+      `message` est en français et affichable tel quel, `code` est stable.
+    - Un corps JSON est limité à 1 Mo et les champs inconnus sont refusés (`400 invalid_json`).
+    - Un identifiant mal formé dans l'URL vaut « introuvable » (`404 not_found`).
+    - Une ressource d'un autre candidat répond `404` (on ne révèle pas son existence).
+    - Langues : `fr` et `wo`. Le wolof est **uniquement audio** (D25) : tout texte wolof est
+      refusé (`400 validation_error`) ; dans les réponses, `text` vaut `""` pour `wo`.
+    - Les bonnes réponses (`is_correct`, `correct_option_ids`) et les explications ne sont
+      jamais envoyées au candidat avant la soumission d'un examen ou la correction d'une
+      question d'entraînement.
 servers:
   - url: http://localhost:8080/api/v1
 
 security:
   - bearer: []
 
+tags:
+  - name: Authentification
+    description: Inscription et connexion par numéro de téléphone, code SMS et PIN à 4 chiffres. Routes publiques, limitées à 10 requêtes d'affilée par IP puis 1 toutes les 6 s.
+  - name: Profil
+    description: Profil, préférences et acceptation des conditions d'utilisation du candidat connecté.
+  - name: Permis
+    description: Catégories de permis et séries publiées proposées au candidat.
+  - name: Examen
+    description: Examens blancs chronométrés sur l'instantané figé d'une série publiée. Le score est calculé uniquement par le serveur.
+  - name: Entraînement
+    description: Mêmes questions que les séries publiées, corrigées une à une, sans chronomètre.
+  - name: Cours
+    description: Thèmes, cours et leçons publiés, avec la progression du candidat.
+  - name: Médias
+    description: Lecture des fichiers audio et image.
+  - name: Administration — contenus
+    description: |
+      Production des contenus. Toutes ces routes exigent un rôle `editor`, `validator` ou `admin` (sinon `403 forbidden`).
+      Cycle de publication (`POST …/status`) : `draft → in_review` (éditeur), `in_review → draft` (éditeur),
+      `in_review → published` (validateur), `published → draft | archived` (validateur), `archived → draft` (admin).
+      Suppression : un brouillon par tout rôle de contenu, sinon validateur ou admin (`403 forbidden_delete`).
+  - name: Administration — comptes
+    description: Comptes, rôles et paramètres des permis. Routes marquées **admin** réservées au rôle `admin`.
+  - name: Santé
+    description: Sonde de disponibilité pour l'hébergement.
+
 paths:
+  # -------------------------------------------------------------------------
+  # Santé
+  # -------------------------------------------------------------------------
+  /healthz:
+    servers:
+      - url: /
+        description: Racine du serveur (hors `/api/v1`)
+    get:
+      tags: [Santé]
+      operationId: healthCheck
+      summary: Vérifier que l'API et la base répondent
+      security: []
+      responses:
+        "200":
+          description: API et base de données disponibles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, const: ok }
+        "503":
+          description: Base de données injoignable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, const: unavailable }
+
+  # -------------------------------------------------------------------------
+  # Authentification
+  # -------------------------------------------------------------------------
   /auth/otp/request:
     post:
+      tags: [Authentification]
+      operationId: requestOtp
       summary: Envoyer un code SMS
       description: |
         `register` exige un numéro sans compte (sinon 409) ; `login` et `reset_pin` exigent un compte (sinon 404).
@@ -27,6 +98,7 @@ paths:
             schema:
               type: object
               required: [phone_number, purpose]
+              additionalProperties: false
               properties:
                 phone_number: { type: string, example: "77 123 45 67" }
                 purpose: { $ref: "#/components/schemas/Purpose" }
@@ -38,16 +110,22 @@ paths:
               schema:
                 type: object
                 properties:
-                  status: { type: string, example: sent }
+                  status: { type: string, const: sent }
                   expires_in_seconds: { type: integer, example: 300 }
-        "400": { $ref: "#/components/responses/Error" }
-        "404": { $ref: "#/components/responses/Error" }
-        "409": { $ref: "#/components/responses/Error" }
-        "429": { $ref: "#/components/responses/Error" }
+                  dev_code:
+                    type: string
+                    description: Uniquement en développement (envoi de SMS simulé) ; jamais en production.
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
         "502": { $ref: "#/components/responses/Error" }
 
   /auth/otp/verify:
     post:
+      tags: [Authentification]
+      operationId: verifyOtp
       summary: Vérifier un code SMS
       description: |
         5 essais par code. `login` renvoie directement `tokens` (et débloque un compte bloqué) ;
@@ -60,6 +138,7 @@ paths:
             schema:
               type: object
               required: [phone_number, purpose, code]
+              additionalProperties: false
               properties:
                 phone_number: { type: string }
                 purpose: { $ref: "#/components/schemas/Purpose" }
@@ -72,14 +151,22 @@ paths:
               schema:
                 type: object
                 properties:
-                  verification_token: { type: string }
+                  verification_token: { type: string, description: "`register` et `reset_pin` uniquement" }
                   tokens: { $ref: "#/components/schemas/TokenPair" }
-        "400": { $ref: "#/components/responses/Error" }
-        "429": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /auth/register:
     post:
+      tags: [Authentification]
+      operationId: register
       summary: Créer le compte après vérification du numéro
+      description: |
+        Exige la version en vigueur des conditions d'utilisation (`terms_version`, la même que
+        `GET /me` renvoie) : vide → `400 validation_error` (champ `terms_version`) ;
+        autre version → `409 terms_outdated`.
       security: []
       requestBody:
         required: true
@@ -87,25 +174,30 @@ paths:
           application/json:
             schema:
               type: object
-              required: [verification_token, display_name, preferred_language, learning_mode, pin]
+              required: [verification_token, display_name, preferred_language, learning_mode, pin, terms_version]
+              additionalProperties: false
               properties:
                 verification_token: { type: string }
-                display_name: { type: string, maxLength: 80 }
+                display_name: { type: string, minLength: 1, maxLength: 80 }
                 preferred_language: { $ref: "#/components/schemas/Language" }
                 learning_mode: { $ref: "#/components/schemas/LearningMode" }
                 pin: { $ref: "#/components/schemas/PIN" }
+                terms_version: { type: string, example: "2026-10-19" }
       responses:
         "201":
           description: Compte créé, session ouverte
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TokenPair" }
-        "400": { $ref: "#/components/responses/Error" }
-        "401": { $ref: "#/components/responses/Error" }
-        "409": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /auth/login:
     post:
+      tags: [Authentification]
+      operationId: login
       summary: Se connecter avec le PIN
       description: 5 erreurs consécutives bloquent le compte 15 min (423). Le déblocage immédiat passe par un OTP `login`.
       security: []
@@ -116,6 +208,7 @@ paths:
             schema:
               type: object
               required: [phone_number, pin]
+              additionalProperties: false
               properties:
                 phone_number: { type: string }
                 pin: { type: string }
@@ -125,20 +218,24 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TokenPair" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401":
-          description: Identifiants incorrects (`details.remaining_attempts` si le numéro existe)
+          description: "`invalid_credentials` (`details.remaining_attempts` si le numéro existe)"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorBody" }
-        "403": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "423":
-          description: Compte bloqué (`details.locked_until`)
+          description: "`account_locked` (`details.locked_until`)"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorBody" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /auth/pin/reset:
     post:
+      tags: [Authentification]
+      operationId: resetPin
       summary: Définir un nouveau PIN après vérification par OTP `reset_pin`
       description: Débloque le compte et ferme toutes les autres sessions.
       security: []
@@ -149,6 +246,7 @@ paths:
             schema:
               type: object
               required: [verification_token, pin]
+              additionalProperties: false
               properties:
                 verification_token: { type: string }
                 pin: { $ref: "#/components/schemas/PIN" }
@@ -158,48 +256,56 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TokenPair" }
-        "400": { $ref: "#/components/responses/Error" }
-        "401": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /auth/refresh:
     post:
+      tags: [Authentification]
+      operationId: refreshTokens
       summary: Renouveler la session (rotation du jeton de rafraîchissement)
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [refresh_token]
-              properties:
-                refresh_token: { type: string }
+            schema: { $ref: "#/components/schemas/RefreshTokenInput" }
       responses:
         "200":
-          description: Nouvelle paire de jetons ; l'ancien jeton de rafraîchissement est révoqué
+          description: Nouvelle paire de jetons ; l'ancien jeton de rafraîchissement est révoqué. Les rôles du jeton d'accès sont relus en base.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TokenPair" }
-        "401": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /auth/logout:
     post:
+      tags: [Authentification]
+      operationId: logout
       summary: Fermer la session
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [refresh_token]
-              properties:
-                refresh_token: { type: string }
+            schema: { $ref: "#/components/schemas/RefreshTokenInput" }
       responses:
         "204": { description: Session fermée }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
+  # -------------------------------------------------------------------------
+  # Profil
+  # -------------------------------------------------------------------------
   /me:
     get:
+      tags: [Profil]
+      operationId: getMe
       summary: Consulter son profil
       responses:
         "200":
@@ -207,17 +313,22 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Me" }
-        "401": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
-      summary: Modifier son nom, sa langue ou son mode d'apprentissage
+      tags: [Profil]
+      operationId: updateMe
+      summary: Modifier son nom, sa langue d'écoute ou son mode d'apprentissage
+      description: Seuls les champs présents sont modifiés.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
-                display_name: { type: string, maxLength: 80 }
+                display_name: { type: string, minLength: 1, maxLength: 80 }
                 preferred_language: { $ref: "#/components/schemas/Language" }
                 learning_mode: { $ref: "#/components/schemas/LearningMode" }
       responses:
@@ -226,11 +337,47 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Me" }
-        "400": { $ref: "#/components/responses/Error" }
-        "401": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
+  /me/terms-acceptance:
+    post:
+      tags: [Profil]
+      operationId: acceptTerms
+      summary: Accepter la version en vigueur des conditions d'utilisation
+      description: |
+        Idempotent : la date d'acceptation n'est pas modifiée si cette version est déjà acceptée.
+        Version vide → `400 validation_error` ; version différente de celle en vigueur → `409 terms_outdated`
+        (l'application doit être mise à jour).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              additionalProperties: false
+              properties:
+                version: { type: string, example: "2026-10-19" }
+      responses:
+        "200":
+          description: Profil à jour (`terms_accepted` vaut `true`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  # -------------------------------------------------------------------------
+  # Permis
+  # -------------------------------------------------------------------------
   /license-categories:
     get:
+      tags: [Permis]
+      operationId: listLicenseCategories
       summary: Lister les catégories de permis actives
       responses:
         "200":
@@ -243,7 +390,1310 @@ paths:
                   items:
                     type: array
                     items: { $ref: "#/components/schemas/LicenseCategory" }
-        "401": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /license-categories/{id}/series:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Permis]
+      operationId: listPublishedSeries
+      summary: Lister les séries publiées d'un permis, avec ses statistiques
+      description: |
+        Séries publiées d'un permis actif, par numéro. Les examens expirés du candidat sont
+        d'abord soumis automatiquement. Un permis inconnu (UUID valide) renvoie une liste vide.
+      responses:
+        "200":
+          description: Séries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/SeriesSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # -------------------------------------------------------------------------
+  # Examen
+  # -------------------------------------------------------------------------
+  /exam-sessions:
+    post:
+      tags: [Examen]
+      operationId: startExamSession
+      summary: Démarrer un examen sur la série choisie
+      description: |
+        Crée une session sur l'instantané publié courant de la série (questions dans l'ordre fixe,
+        sans bonnes réponses). Le serveur fixe `expires_at` = début + `license_categories.exam_duration_minutes`.
+
+        Un seul examen en cours par candidat : s'il en existe un (non expiré), réponse
+        `409 session_in_progress` avec `details.session_id` ; renvoyer la requête avec
+        `abandon_current: true` le soumet en l'état (`submit_reason: abandoned`) avant d'en démarrer un nouveau.
+        Un examen en cours déjà expiré est soumis automatiquement (`timeout`).
+        Tentatives illimitées : chaque examen est une nouvelle session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [license_category_id, series_id]
+              additionalProperties: false
+              properties:
+                license_category_id: { type: string, format: uuid }
+                series_id: { type: string, format: uuid }
+                abandon_current:
+                  type: boolean
+                  default: false
+                  description: Abandonner (soumettre en l'état) l'examen en cours pour en démarrer un nouveau.
+      responses:
+        "201":
+          description: Session créée
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExamSession" }
+        "400":
+          description: "`invalid_json` ou `series_license_mismatch` (la série n'appartient pas à ce permis)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: "`series_unavailable` : série inconnue, non publiée ou permis inactif"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+        "409":
+          description: "`session_in_progress` (`details.session_id`)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+    get:
+      tags: [Examen]
+      operationId: listExamSessions
+      summary: Historique de ses examens (paginé)
+      description: Du plus récent au plus ancien. Les examens expirés sont d'abord soumis automatiquement.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Tentatives
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/HistoryItem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /exam-sessions/current:
+    get:
+      tags: [Examen]
+      operationId: getCurrentExamSession
+      summary: Examen en cours (pour proposer de le reprendre)
+      description: Les examens expirés sont d'abord soumis automatiquement ; `404` s'il n'y a aucun examen en cours.
+      responses:
+        "200":
+          description: Session en cours
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExamSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /exam-sessions/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Examen]
+      operationId: getExamSession
+      summary: Reprendre ou consulter un examen
+      description: |
+        Une session expirée est d'abord soumise automatiquement (`submit_reason: timeout`).
+        `server_time` permet de calculer le temps restant sans dépendre de l'horloge du téléphone.
+        Jamais de bonnes réponses ici, même après soumission (voir `/review`).
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExamSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /exam-sessions/{id}/answers/{questionId}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+      - $ref: "#/components/parameters/QuestionIdPath"
+    put:
+      tags: [Examen]
+      operationId: answerExamQuestion
+      summary: Enregistrer ou modifier une réponse
+      description: |
+        Remplace la réponse à la question ; une liste vide (ou absente) l'efface.
+        Une seule proposition pour une question `single`. Tolérance de 5 s après `expires_at`
+        (latence réseau) ; au-delà, la session est soumise automatiquement et la réponse est
+        refusée (`409 session_expired`). Une session soumise est en lecture seule (`409 session_submitted`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnswerInput" }
+      responses:
+        "204": { description: Réponse enregistrée }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: "`not_found` (session) ou `question_not_in_session`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+        "409":
+          description: "`session_submitted` ou `session_expired`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  /exam-sessions/{id}/submit:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    post:
+      tags: [Examen]
+      operationId: submitExamSession
+      summary: Soumettre l'examen (idempotent)
+      description: |
+        Le serveur évalue la session (question sans réponse = faute ; réponse multiple juste
+        seulement si l'ensemble coché est exact ; réussi si fautes ≤ `max_faults`).
+        Idempotent : une session déjà soumise renvoie son résultat inchangé.
+        Soumis après `expires_at` + 5 s, le motif est `timeout`.
+      responses:
+        "200":
+          description: Session soumise, avec `result`
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExamSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /exam-sessions/{id}/result:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Examen]
+      operationId: getExamResult
+      summary: Résultat d'un examen soumis
+      responses:
+        "200":
+          description: Résultat
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExamResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`session_not_submitted` : examen encore en cours"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  /exam-sessions/{id}/review:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Examen]
+      operationId: getExamReview
+      summary: Corrections détaillées d'un examen soumis
+      description: |
+        Bonnes réponses, réponses choisies, résultat par question et explications. Disponible
+        **uniquement après soumission** (`409 session_not_submitted` sinon).
+      responses:
+        "200":
+          description: Correction
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExamReview" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`session_not_submitted` : examen encore en cours"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  # -------------------------------------------------------------------------
+  # Entraînement
+  # -------------------------------------------------------------------------
+  /practice:
+    get:
+      tags: [Entraînement]
+      operationId: getPracticeSummary
+      summary: Permis, séries publiées et progression à l'entraînement
+      responses:
+        "200":
+          description: Un élément par permis actif
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/PracticeLicense" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /practice/series/{id}/questions:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Entraînement]
+      operationId: listPracticeQuestions
+      summary: Questions d'une série publiée, dans l'ordre, sans bonnes réponses
+      responses:
+        "200":
+          description: Questions avec le dernier résultat du candidat sur chacune
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/PracticeItem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: "`series_unavailable`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  /practice/license-categories/{id}/mistakes:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Entraînement]
+      operationId: listPracticeMistakes
+      summary: Erreurs à revoir pour un permis
+      description: |
+        Questions dont la dernière réponse d'entraînement (dans leur série) est fausse ; une
+        question ratée dans deux séries n'apparaît qu'une fois. Ici `last_outcome` vaut toujours `null`.
+      responses:
+        "200":
+          description: Questions à revoir
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/PracticeItem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /practice/series/{id}/questions/{questionId}/check:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+      - $ref: "#/components/parameters/QuestionIdPath"
+    post:
+      tags: [Entraînement]
+      operationId: checkPracticeAnswer
+      summary: Corriger une réponse d'entraînement
+      description: |
+        Renvoie la correction et les explications de **cette** question uniquement, et
+        enregistre la réponse (progression et erreurs à revoir). Au moins une proposition.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnswerInput" }
+      responses:
+        "200":
+          description: Correction
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PracticeCheck" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: "`series_unavailable`, `question_not_in_session` (question absente de la série) ou `not_found`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  # -------------------------------------------------------------------------
+  # Cours
+  # -------------------------------------------------------------------------
+  /course-categories:
+    get:
+      tags: [Cours]
+      operationId: listCourseCatalog
+      summary: Catalogue des cours publiés, par thème
+      description: |
+        Thèmes contenant au moins un cours publié ayant au moins une leçon publiée, avec la
+        progression du candidat. Les cours n'incluent pas ici la liste `lessons`.
+      responses:
+        "200":
+          description: Thèmes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CourseCategoryView" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /courses/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Cours]
+      operationId: getCourse
+      summary: Consulter un cours publié et ses leçons publiées
+      responses:
+        "200":
+          description: Cours (`lessons` absent s'il n'a aucune leçon publiée)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseView" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /lessons/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Cours]
+      operationId: getLesson
+      summary: Consulter une leçon publiée et ses blocs de contenu
+      description: Leçon publiée d'un cours publié ; `next_lesson_id` permet d'enchaîner.
+      responses:
+        "200":
+          description: Leçon
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LessonView" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /lessons/{id}/completion:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    post:
+      tags: [Cours]
+      operationId: completeLesson
+      summary: Marquer une leçon comme terminée (idempotent)
+      responses:
+        "204": { description: Leçon terminée }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # -------------------------------------------------------------------------
+  # Médias
+  # -------------------------------------------------------------------------
+  /media/{id}/file:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Médias]
+      operationId: getMediaFile
+      summary: Lire un fichier audio ou image
+      description: |
+        **Public** (sans jeton) : une balise `<img>`/`<audio>` ne peut pas envoyer de jeton ;
+        les identifiants ne sont pas devinables et les contenus ne sont pas confidentiels.
+        Cache immuable (`Cache-Control: public, max-age=31536000, immutable`) et lecture
+        partielle (`Range`) prises en charge.
+      security: []
+      parameters:
+        - name: Range
+          in: header
+          required: false
+          schema: { type: string, example: "bytes=0-1023" }
+      responses:
+        "200":
+          description: Fichier
+          content:
+            audio/*:
+              schema: { type: string, format: binary }
+            image/*:
+              schema: { type: string, format: binary }
+        "206":
+          description: Partie du fichier (requête `Range`)
+          content:
+            audio/*:
+              schema: { type: string, format: binary }
+            image/*:
+              schema: { type: string, format: binary }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # -------------------------------------------------------------------------
+  # Administration — contenus : tableau de bord, médias
+  # -------------------------------------------------------------------------
+  /admin/statistics:
+    get:
+      tags: [Administration — contenus]
+      operationId: getAdminStatistics
+      summary: Tableau de bord
+      description: "Rôles : editor, validator, admin."
+      responses:
+        "200":
+          description: Statistiques
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Statistics" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/media:
+    post:
+      tags: [Administration — contenus]
+      operationId: uploadMedia
+      summary: Envoyer un fichier audio ou image
+      description: |
+        Rôles : editor, validator, admin. Formulaire multipart, champ **`file`**.
+        Le type est détecté sur le contenu (pas sur le nom) : image PNG, JPEG, WEBP (≤ 5 Mo) ;
+        audio MP3, M4A, OGG, WAV (≤ 15 Mo). Corps limité à 16 Mo.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Média enregistré
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaAsset" }
+        "400":
+          description: "`validation_error` (champ `file` absent)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413":
+          description: "`file_too_large`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+        "415":
+          description: "`unsupported_media`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+    get:
+      tags: [Administration — contenus]
+      operationId: listMedia
+      summary: Lister les médias récents (paginé)
+      description: "Rôles : editor, validator, admin. Du plus récent au plus ancien."
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema: { type: string, enum: [audio, image] }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Médias
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/MediaAsset" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # -------------------------------------------------------------------------
+  # Administration — contenus : questions
+  # -------------------------------------------------------------------------
+  /admin/questions:
+    get:
+      tags: [Administration — contenus]
+      operationId: listQuestions
+      summary: Lister les questions (paginé)
+      description: "Rôles : editor, validator, admin. Tri par dernière modification ; `search` cherche dans l'énoncé français."
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/ContentStatus" }
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Page de questions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/QuestionSummary" }
+                  total: { type: integer }
+                  page: { type: integer }
+                  page_size: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Administration — contenus]
+      operationId: createQuestion
+      summary: Créer une question (brouillon)
+      description: |
+        Rôles : editor, validator, admin. Énoncé français obligatoire ; en wolof, seulement des
+        audios (énoncé, explication, propositions) : un texte, une explication ou une image wolof
+        est refusé (`400 validation_error`, D25).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuestionInput" }
+      responses:
+        "201":
+          description: Question créée
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Question" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/questions/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Administration — contenus]
+      operationId: getQuestion
+      summary: Lire une question complète (avec bonnes réponses)
+      description: "Rôles : editor, validator, admin."
+      responses:
+        "200":
+          description: Question
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Question" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Administration — contenus]
+      operationId: updateQuestion
+      summary: Remplacer une question
+      description: |
+        Rôles : editor, validator, admin. Remplacement complet (mêmes règles que la création).
+        Modifier une question publiée la repasse en brouillon avec `version + 1` ; c'est refusé
+        (`409 question_in_published_series`) si elle fait partie d'une série publiée : les séries
+        publiées gardent leur instantané figé. Les propositions sont mises à jour par lettre ;
+        supprimer une lettre déjà choisie dans un examen est refusé (`409 option_in_use`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuestionInput" }
+      responses:
+        "200":
+          description: Question modifiée
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Question" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Administration — contenus]
+      operationId: deleteQuestion
+      summary: Supprimer définitivement une question
+      description: |
+        Brouillon : editor, validator, admin ; sinon validator ou admin (`403 forbidden_delete`).
+        Refusé si la question est dans une série (`409 question_in_series`) ou si un candidat y a
+        déjà répondu (`409 question_answered`) : il faut alors l'archiver.
+      responses:
+        "204": { description: Question supprimée }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/questions/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    post:
+      tags: [Administration — contenus]
+      operationId: setQuestionStatus
+      summary: Changer le statut d'une question (cycle de publication)
+      description: |
+        Rôles selon la transition (voir le tag). Soumettre ou publier exige l'énoncé français et
+        un texte ou une image française pour chaque proposition (`422 question_incomplete`,
+        `details.missing`). Quitter `published` est refusé si la question est dans une série
+        publiée (`409 question_in_published_series`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StatusInput" }
+      responses:
+        "200":
+          description: Question
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Question" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  # -------------------------------------------------------------------------
+  # Administration — contenus : séries d'examen
+  # -------------------------------------------------------------------------
+  /admin/exam-series:
+    get:
+      tags: [Administration — contenus]
+      operationId: listExamSeries
+      summary: Lister les séries
+      description: "Rôles : editor, validator, admin. Tous statuts confondus."
+      parameters:
+        - name: license_category_id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Séries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Series" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Administration — contenus]
+      operationId: createExamSeries
+      summary: Créer une série (brouillon, vide)
+      description: |
+        Rôles : editor, validator, admin. `series_number` entre 1 et `license_categories.series_count`
+        (`400 validation_error`, `details.max`) ; une série par numéro et par permis (`409 series_exists`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [license_category_id, series_number]
+              additionalProperties: false
+              properties:
+                license_category_id: { type: string, format: uuid }
+                series_number: { type: integer, minimum: 1 }
+      responses:
+        "201":
+          description: Série créée
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeriesDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/exam-series/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Administration — contenus]
+      operationId: getExamSeries
+      summary: Lire une série et ses questions dans l'ordre
+      description: "Rôles : editor, validator, admin."
+      responses:
+        "200":
+          description: Série
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeriesDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Administration — contenus]
+      operationId: deleteExamSeries
+      summary: Supprimer définitivement une série et ses versions publiées
+      description: |
+        Brouillon : editor, validator, admin ; sinon validator ou admin (`403 forbidden_delete`).
+        Refusé si un candidat a déjà passé la série (`409 series_has_sessions`) : il faut l'archiver.
+      responses:
+        "204": { description: Série supprimée }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/exam-series/{id}/questions:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    put:
+      tags: [Administration — contenus]
+      operationId: setExamSeriesQuestions
+      summary: Définir la composition et l'ordre des questions
+      description: |
+        Rôles : editor, validator, admin. Remplace la liste (positions 1…n dans l'ordre donné) :
+        pas de doublon, questions existantes et non archivées, au plus `questions_per_series`
+        (`400 validation_error`, `details.max`). La série repasse en brouillon (sauf si archivée) ;
+        les versions publiées et les sessions déjà démarrées gardent leur instantané figé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question_ids]
+              additionalProperties: false
+              properties:
+                question_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                  uniqueItems: true
+      responses:
+        "200":
+          description: Série
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeriesDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/exam-series/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    post:
+      tags: [Administration — contenus]
+      operationId: setExamSeriesStatus
+      summary: Changer le statut d'une série (publier = instantané immuable)
+      description: |
+        Rôles selon la transition (voir le tag). Soumettre ou publier exige exactement
+        `questions_per_series` questions (`422 series_incomplete`, `details.expected`/`actual`),
+        toutes publiées (`422 questions_not_published`, `details.count`) et complètes en français
+        (`422 question_incomplete`). Publier fige un **instantané versionné immuable**
+        (`current_version + 1`) : c'est lui que passent les candidats ; une modification ultérieure
+        crée une nouvelle version et ne change jamais les sessions passées.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StatusInput" }
+      responses:
+        "200":
+          description: Série
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeriesDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  # -------------------------------------------------------------------------
+  # Administration — contenus : thèmes, cours, leçons
+  # -------------------------------------------------------------------------
+  /admin/course-categories:
+    get:
+      tags: [Administration — contenus]
+      operationId: listCourseCategories
+      summary: Lister les thèmes de cours
+      description: "Rôles : editor, validator, admin."
+      responses:
+        "200":
+          description: Thèmes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CourseCategory" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Administration — contenus]
+      operationId: createCourseCategory
+      summary: Créer un thème
+      description: |
+        Rôles : editor, validator, admin. Titre français obligatoire ; en wolof, seulement
+        `audio_media_id` (un titre ou une description wolof est refusé, D25).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseCategoryInput" }
+      responses:
+        "201":
+          description: Thème créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/course-categories/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    put:
+      tags: [Administration — contenus]
+      operationId: updateCourseCategory
+      summary: Modifier un thème
+      description: "Rôles : editor, validator, admin. Remplacement complet (mêmes règles que la création)."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseCategoryInput" }
+      responses:
+        "204": { description: Thème modifié }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Administration — contenus]
+      operationId: deleteCourseCategory
+      summary: Supprimer un thème vide
+      description: |
+        Rôles : validator ou admin (`403 forbidden_delete` pour un éditeur). Refusé tant que le
+        thème contient des cours (`409 category_not_empty`, `details.courses`).
+      responses:
+        "204": { description: Thème supprimé }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/courses:
+    get:
+      tags: [Administration — contenus]
+      operationId: listCourses
+      summary: Lister les cours (tous statuts)
+      description: "Rôles : editor, validator, admin. Sans la liste `lessons`."
+      parameters:
+        - name: category_id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Cours
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Course" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Administration — contenus]
+      operationId: createCourse
+      summary: Créer un cours (brouillon)
+      description: |
+        Rôles : editor, validator, admin. Titre français obligatoire ; en wolof, seulement
+        `audio_media_id` (D25). Thème, permis ou média inconnu : `400 invalid_reference`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseInput" }
+      responses:
+        "201":
+          description: Cours créé
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Course" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/courses/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Administration — contenus]
+      operationId: getAdminCourse
+      summary: Lire un cours et ses leçons
+      description: "Rôles : editor, validator, admin."
+      responses:
+        "200":
+          description: Cours
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Course" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Administration — contenus]
+      operationId: updateCourse
+      summary: Modifier un cours
+      description: |
+        Rôles : editor, validator, admin. Remplacement complet. Modifier un cours publié le
+        repasse en brouillon : il doit être revalidé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseInput" }
+      responses:
+        "200":
+          description: Cours
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Course" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Administration — contenus]
+      operationId: deleteCourse
+      summary: Supprimer un cours et ses leçons
+      description: |
+        Brouillon : editor, validator, admin ; sinon validator ou admin (`403 forbidden_delete`).
+        Les questions liées perdent seulement leur lien « revoir le cours ».
+      responses:
+        "204": { description: Cours supprimé }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/courses/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    post:
+      tags: [Administration — contenus]
+      operationId: setCourseStatus
+      summary: Changer le statut d'un cours (cycle de publication)
+      description: |
+        Rôles selon la transition (voir le tag). Soumettre ou publier exige le titre français
+        (`422 content_incomplete`, `details.missing: translations`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StatusInput" }
+      responses:
+        "200":
+          description: Cours
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Course" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /admin/courses/{id}/lessons:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    post:
+      tags: [Administration — contenus]
+      operationId: createLesson
+      summary: Créer une leçon dans un cours (brouillon)
+      description: |
+        Rôles : editor, validator, admin. Titre français obligatoire ; en wolof, seulement
+        `audio_media_id` (D25). Les blocs se définissent ensuite avec `PUT /admin/lessons/{id}/contents`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LessonInput" }
+      responses:
+        "201":
+          description: Leçon créée
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lesson" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Cours inconnu (ou média audio inconnu, voir la note du code)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  /admin/lessons/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Administration — contenus]
+      operationId: getAdminLesson
+      summary: Lire une leçon et ses blocs
+      description: "Rôles : editor, validator, admin."
+      responses:
+        "200":
+          description: Leçon
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lesson" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Administration — contenus]
+      operationId: updateLesson
+      summary: Modifier le titre et l'ordre d'une leçon
+      description: |
+        Rôles : editor, validator, admin. Remplacement complet. Modifier une leçon publiée la
+        repasse en brouillon.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LessonInput" }
+      responses:
+        "200":
+          description: Leçon
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lesson" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Administration — contenus]
+      operationId: deleteLesson
+      summary: Supprimer une leçon
+      description: "Brouillon : editor, validator, admin ; sinon validator ou admin (`403 forbidden_delete`)."
+      responses:
+        "204": { description: Leçon supprimée }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/lessons/{id}/contents:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    put:
+      tags: [Administration — contenus]
+      operationId: setLessonContents
+      summary: Remplacer les blocs de contenu d'une leçon
+      description: |
+        Rôles : editor, validator, admin. Remplace **tous** les blocs (une langue absente du corps
+        n'a plus de blocs), dans l'ordre donné. Bloc `text` : `text` non vide (`media_id` ignoré) ;
+        bloc `audio` ou `image` : `media_id` obligatoire. En wolof, uniquement des blocs `audio`
+        (D25). Une leçon publiée repasse en brouillon.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LessonContents" }
+      responses:
+        "200":
+          description: Leçon
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lesson" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/lessons/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    post:
+      tags: [Administration — contenus]
+      operationId: setLessonStatus
+      summary: Changer le statut d'une leçon (cycle de publication)
+      description: |
+        Rôles selon la transition (voir le tag). Soumettre ou publier exige le titre français
+        et au moins un bloc français (`422 content_incomplete`, `details.missing` :
+        `translations` ou `contents`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StatusInput" }
+      responses:
+        "200":
+          description: Leçon
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lesson" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  # -------------------------------------------------------------------------
+  # Administration — comptes et permis
+  # -------------------------------------------------------------------------
+  /admin/license-categories:
+    get:
+      tags: [Administration — comptes]
+      operationId: listAdminLicenseCategories
+      summary: Lister les permis, y compris inactifs
+      description: "Rôles : editor, validator, admin."
+      responses:
+        "200":
+          description: Permis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminLicenseCategory" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/license-categories/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    patch:
+      tags: [Administration — comptes]
+      operationId: updateLicenseCategory
+      summary: Modifier les paramètres d'un permis (admin)
+      description: |
+        **admin** uniquement. Seuls les champs présents sont modifiés. Le barème (`max_faults`) des
+        séries déjà publiées reste celui de leur instantané ; la durée s'applique aux examens
+        démarrés ensuite.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1 }
+                series_count: { type: integer, minimum: 1, maximum: 100 }
+                questions_per_series: { type: integer, minimum: 1, maximum: 100 }
+                max_faults: { type: integer, minimum: 0 }
+                exam_duration_minutes: { type: integer, minimum: 1, maximum: 180 }
+                is_active: { type: boolean }
+      responses:
+        "200":
+          description: Permis modifié
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminLicenseCategory" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/users:
+    get:
+      tags: [Administration — comptes]
+      operationId: listUsers
+      summary: Lister les comptes et leurs rôles (admin)
+      description: "**admin** uniquement. `search` cherche dans le nom et le numéro. Du plus récent au plus ancien."
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Comptes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminUser" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{id}/roles:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    put:
+      tags: [Administration — comptes]
+      operationId: setUserRoles
+      summary: Remplacer les rôles d'un compte (admin)
+      description: |
+        **admin** uniquement. Prend effet au prochain renouvellement du jeton d'accès de
+        l'utilisateur (15 min au plus). Un administrateur ne peut pas retirer son propre rôle
+        `admin` (`409 self_demotion`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              additionalProperties: false
+              properties:
+                roles:
+                  type: array
+                  items: { $ref: "#/components/schemas/Role" }
+      responses:
+        "200":
+          description: Rôles enregistrés (triés, sans doublon)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  roles:
+                    type: [array, "null"]
+                    items: { $ref: "#/components/schemas/Role" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
 components:
   securitySchemes:
@@ -252,14 +1702,75 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Identifiant (UUID) ; un identifiant mal formé renvoie 404.
+      schema: { type: string, format: uuid }
+    QuestionIdPath:
+      name: questionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Numéro de page, à partir de 1.
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: page_size
+      in: query
+      required: false
+      description: Éléments par page (100 au plus ; une valeur supérieure est ramenée à 100).
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
   responses:
     Error:
       description: Erreur normalisée
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorBody" }
+    BadRequest:
+      description: "Requête invalide : `invalid_json`, `validation_error` (`details.field`), `invalid_reference`…"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+    Unauthorized:
+      description: "Non authentifié : `unauthenticated` (jeton absent, invalide ou expiré) ou jeton de vérification / rafraîchissement invalide"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+    Forbidden:
+      description: "Accès refusé : `forbidden` (rôle insuffisant), `forbidden_transition`, `forbidden_delete`, `account_disabled`"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+    NotFound:
+      description: "Introuvable : `not_found` (ou ressource d'un autre utilisateur)"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+    Conflict:
+      description: Conflit avec l'état actuel (le `code` précise la règle)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+    UnprocessableEntity:
+      description: "Contenu incomplet pour cette étape : `content_incomplete`, `question_incomplete`, `series_incomplete`, `questions_not_published`"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+    TooManyRequests:
+      description: "Trop de requêtes : `rate_limited`, `otp_too_soon`, `otp_quota_exceeded`, `otp_too_many_attempts`"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
 
   schemas:
+    # --- Énumérations -------------------------------------------------------
     Purpose:
       type: string
       enum: [register, login, reset_pin]
@@ -269,10 +1780,53 @@ components:
     LearningMode:
       type: string
       enum: [text, audio]
+    Role:
+      type: string
+      enum: [candidate, editor, validator, admin]
+    ContentStatus:
+      type: string
+      enum: [draft, in_review, published, archived]
+    QuestionType:
+      type: string
+      enum: [single, multiple]
+    Outcome:
+      type: string
+      enum: [correct, incorrect, unanswered]
     PIN:
       type: string
       pattern: "^[0-9]{4}$"
       description: 4 chiffres ; les suites évidentes (0000, 1234, 9876…) sont refusées.
+    NullableUUID:
+      type: [string, "null"]
+      format: uuid
+    NullableURL:
+      type: [string, "null"]
+      description: Chemin du fichier (`/api/v1/media/{id}/file`), ou null.
+      example: /api/v1/media/0b6f3a52-7c1e-4d5e-9c3b-2f1a8e7d6c5b/file
+
+    # --- Erreurs ------------------------------------------------------------
+    ErrorBody:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: invalid_pin }
+            message: { type: string, example: Le code PIN doit contenir exactement 4 chiffres. }
+            details:
+              type: object
+              additionalProperties: true
+              description: Facultatif (absent si vide), par exemple `field`, `session_id`, `missing`, `max`.
+
+    # --- Authentification et profil -----------------------------------------
+    RefreshTokenInput:
+      type: object
+      required: [refresh_token]
+      additionalProperties: false
+      properties:
+        refresh_token: { type: string }
 
     TokenPair:
       type: object
@@ -293,9 +1847,17 @@ components:
         learning_mode: { $ref: "#/components/schemas/LearningMode" }
         roles:
           type: array
-          items: { type: string, enum: [candidate, editor, validator, admin] }
+          items: { $ref: "#/components/schemas/Role" }
         created_at: { type: string, format: date-time }
+        terms_version:
+          type: string
+          description: Version en vigueur des conditions d'utilisation.
+          example: "2026-10-19"
+        terms_accepted:
+          type: boolean
+          description: Le candidat a accepté la version en vigueur ; sinon l'application doit la lui faire accepter (`POST /me/terms-acceptance`).
 
+    # --- Permis -------------------------------------------------------------
     LicenseCategory:
       type: object
       properties:
@@ -307,13 +1869,563 @@ components:
         max_faults: { type: integer, example: 4 }
         exam_duration_minutes: { type: integer, example: 20 }
 
-    ErrorBody:
+    AdminLicenseCategory:
+      allOf:
+        - $ref: "#/components/schemas/LicenseCategory"
+        - type: object
+          properties:
+            is_active: { type: boolean }
+
+    SeriesSummary:
+      type: object
+      description: Série publiée proposée au candidat, avec ses propres statistiques.
+      properties:
+        id: { type: string, format: uuid }
+        series_number: { type: integer }
+        question_count: { type: integer }
+        duration_minutes: { type: integer }
+        max_faults: { type: integer }
+        attempts: { type: integer, description: Examens soumis sur cette série }
+        best_faults: { type: [integer, "null"], description: "Moins de fautes obtenu (null : jamais passée)" }
+        last_passed: { type: [boolean, "null"], description: Résultat du dernier examen soumis }
+
+    # --- Contenu vu par le candidat -----------------------------------------
+    LocalizedContent:
+      type: object
+      description: Texte et médias dans une langue. En wolof, `text` est vide (audio seulement, D25).
+      properties:
+        text: { type: string }
+        audio_url: { $ref: "#/components/schemas/NullableURL" }
+        image_url: { $ref: "#/components/schemas/NullableURL" }
+
+    LocalizedContents:
+      type: object
+      description: Contenus par code de langue (`fr`, `wo`) ; une langue sans contenu est absente.
+      propertyNames: { $ref: "#/components/schemas/Language" }
+      additionalProperties: { $ref: "#/components/schemas/LocalizedContent" }
+
+    ExamOption:
+      type: object
+      description: Proposition telle que vue par le candidat, sans `is_correct`.
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: A }
+        contents: { $ref: "#/components/schemas/LocalizedContents" }
+
+    ExamQuestion:
+      type: object
+      description: Question envoyée au candidat, SANS bonnes réponses ni explications.
+      properties:
+        position: { type: integer, minimum: 1 }
+        question_id: { type: string, format: uuid }
+        question_type: { $ref: "#/components/schemas/QuestionType" }
+        contents: { $ref: "#/components/schemas/LocalizedContents" }
+        options:
+          type: array
+          items: { $ref: "#/components/schemas/ExamOption" }
+
+    ExamResult:
       type: object
       properties:
-        error:
+        correct_count: { type: integer }
+        fault_count: { type: integer, description: "Fautes, questions sans réponse comprises" }
+        unanswered_count: { type: integer }
+        max_faults: { type: integer }
+        passed: { type: boolean, description: "`fault_count ≤ max_faults`" }
+
+    ExamSession:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        series_id: { type: string, format: uuid }
+        license_code: { type: string, example: B }
+        series_number: { type: integer }
+        series_version: { type: integer, description: Version de l'instantané passé }
+        status: { type: string, enum: [in_progress, submitted] }
+        submit_reason:
+          type: [string, "null"]
+          enum: [manual, timeout, abandoned, null]
+        duration_minutes: { type: integer }
+        max_faults: { type: integer }
+        started_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time, description: Fixé par le serveur }
+        submitted_at: { type: [string, "null"], format: date-time }
+        server_time: { type: string, format: date-time, description: "Heure du serveur, pour le chronomètre" }
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/ExamQuestion" }
+        answers:
           type: object
-          required: [code, message]
+          description: Propositions choisies par question (`question_id` → `option_ids` triés).
+          additionalProperties:
+            type: array
+            items: { type: string, format: uuid }
+        result:
+          description: Null tant que la session est en cours.
+          oneOf:
+            - $ref: "#/components/schemas/ExamResult"
+            - type: "null"
+
+    ReviewQuestion:
+      allOf:
+        - $ref: "#/components/schemas/ExamQuestion"
+        - type: object
           properties:
-            code: { type: string, example: invalid_pin }
-            message: { type: string, example: Le code PIN doit contenir exactement 4 chiffres. }
-            details: { type: object, additionalProperties: true }
+            selected_option_ids:
+              type: array
+              items: { type: string, format: uuid }
+            correct_option_ids:
+              type: array
+              items: { type: string, format: uuid }
+            outcome: { $ref: "#/components/schemas/Outcome" }
+            explanations: { $ref: "#/components/schemas/Explanations" }
+            related_lesson_id: { $ref: "#/components/schemas/NullableUUID" }
+
+    Explanations:
+      type: object
+      description: |
+        Explication par langue (`fr` : texte et audio ; `wo` : audio seulement, `text` vide).
+        `image_url` est toujours null. Une langue sans explication est absente.
+      propertyNames: { $ref: "#/components/schemas/Language" }
+      additionalProperties: { $ref: "#/components/schemas/LocalizedContent" }
+
+    ExamReview:
+      type: object
+      properties:
+        session_id: { type: string, format: uuid }
+        result: { $ref: "#/components/schemas/ExamResult" }
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewQuestion" }
+
+    HistoryItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        license_code: { type: string }
+        series_number: { type: integer }
+        status: { type: string, enum: [in_progress, submitted] }
+        started_at: { type: string, format: date-time }
+        submitted_at: { type: [string, "null"], format: date-time }
+        result:
+          oneOf:
+            - $ref: "#/components/schemas/ExamResult"
+            - type: "null"
+
+    AnswerInput:
+      type: object
+      additionalProperties: false
+      properties:
+        option_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Propositions cochées (doublons ignorés).
+
+    # --- Entraînement -------------------------------------------------------
+    PracticeSeries:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        series_number: { type: integer }
+        question_count: { type: integer }
+        practiced: { type: integer, description: Questions déjà tentées au moins une fois }
+        mastered: { type: integer, description: Questions dont la dernière réponse est juste }
+
+    PracticeLicense:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        series:
+          type: array
+          items: { $ref: "#/components/schemas/PracticeSeries" }
+        mistakes: { type: integer, description: Questions dont la dernière réponse est fausse }
+
+    PracticeItem:
+      type: object
+      properties:
+        series_id: { type: string, format: uuid }
+        question: { $ref: "#/components/schemas/ExamQuestion" }
+        last_outcome:
+          type: [string, "null"]
+          enum: [correct, incorrect, null]
+          description: Dernier résultat du candidat sur cette question dans cette série (null = pas encore répondue).
+
+    PracticeCheck:
+      type: object
+      properties:
+        outcome: { type: string, enum: [correct, incorrect] }
+        correct_option_ids:
+          type: array
+          items: { type: string, format: uuid }
+        explanations: { $ref: "#/components/schemas/Explanations" }
+
+    # --- Cours vus par le candidat ------------------------------------------
+    Label:
+      type: object
+      description: Titre d'un thème, d'un cours ou d'une leçon dans une langue (en wolof, `title` est vide).
+      properties:
+        title: { type: string }
+        description: { type: string, description: Thèmes uniquement ; absent si vide }
+        audio_url: { $ref: "#/components/schemas/NullableURL" }
+
+    Labels:
+      type: object
+      propertyNames: { $ref: "#/components/schemas/Language" }
+      additionalProperties: { $ref: "#/components/schemas/Label" }
+
+    CourseCategoryView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: panneaux }
+        labels: { $ref: "#/components/schemas/Labels" }
+        courses:
+          type: array
+          items: { $ref: "#/components/schemas/CourseView" }
+
+    CourseView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        license_code: { type: [string, "null"], description: "Permis concerné (null : tous)" }
+        labels: { $ref: "#/components/schemas/Labels" }
+        lesson_count: { type: integer, description: Leçons publiées }
+        completed_lessons: { type: integer }
+        lessons:
+          type: array
+          description: "`GET /courses/{id}` uniquement ; absent s'il est vide"
+          items: { $ref: "#/components/schemas/LessonSummary" }
+
+    LessonSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        labels: { $ref: "#/components/schemas/Labels" }
+        completed: { type: boolean }
+
+    BlockView:
+      type: object
+      properties:
+        type: { $ref: "#/components/schemas/BlockType" }
+        text: { type: [string, "null"] }
+        media_url: { $ref: "#/components/schemas/NullableURL" }
+
+    LessonView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        course_id: { type: string, format: uuid }
+        labels: { $ref: "#/components/schemas/Labels" }
+        blocks:
+          type: object
+          description: Blocs dans l'ordre, par langue ; une langue sans bloc est absente.
+          propertyNames: { $ref: "#/components/schemas/Language" }
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/BlockView" }
+        completed: { type: boolean }
+        next_lesson_id: { $ref: "#/components/schemas/NullableUUID" }
+
+    # --- Cours (administration) ---------------------------------------------
+    BlockType:
+      type: string
+      enum: [text, audio, image]
+
+    Translation:
+      type: object
+      description: |
+        Libellé dans une langue. En `fr`, `title` est obligatoire ; en `wo`, seul
+        `audio_media_id` est accepté (`title` vide, pas de `description`, D25).
+      properties:
+        title: { type: string }
+        description: { type: [string, "null"], description: "Thèmes uniquement (ignoré pour les cours et leçons) ; absent de la réponse si null" }
+        audio_media_id: { $ref: "#/components/schemas/NullableUUID" }
+
+    Translations:
+      type: object
+      description: Libellés par code de langue ; `fr` obligatoire.
+      propertyNames: { $ref: "#/components/schemas/Language" }
+      additionalProperties: { $ref: "#/components/schemas/Translation" }
+
+    Block:
+      type: object
+      required: [content_type]
+      additionalProperties: false
+      properties:
+        content_type: { $ref: "#/components/schemas/BlockType" }
+        text: { type: [string, "null"], description: "Bloc `text` uniquement" }
+        media_id: { $ref: "#/components/schemas/NullableUUID" }
+
+    LessonContents:
+      type: object
+      description: Blocs par langue, dans l'ordre. En `wo`, uniquement des blocs `audio` (D25).
+      propertyNames: { $ref: "#/components/schemas/Language" }
+      additionalProperties:
+        type: array
+        items: { $ref: "#/components/schemas/Block" }
+      example:
+        fr:
+          - { content_type: text, text: "Le panneau STOP impose l'arrêt absolu.", media_id: null }
+          - { content_type: image, text: null, media_id: 0b6f3a52-7c1e-4d5e-9c3b-2f1a8e7d6c5b }
+        wo:
+          - { content_type: audio, text: null, media_id: 5c2d1e0f-9a8b-4c7d-8e6f-1a2b3c4d5e6f }
+
+    CourseCategoryInput:
+      type: object
+      required: [code, translations]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]{1,40}$"
+          description: Unique (`409 code_taken`).
+          example: panneaux
+        icon_media_id: { $ref: "#/components/schemas/NullableUUID" }
+        sort_order: { type: integer, default: 0 }
+        translations: { $ref: "#/components/schemas/Translations" }
+
+    CourseCategory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        icon_media_id: { $ref: "#/components/schemas/NullableUUID" }
+        sort_order: { type: integer }
+        translations: { $ref: "#/components/schemas/Translations" }
+        course_count: { type: integer }
+
+    CourseInput:
+      type: object
+      required: [category_id, translations]
+      additionalProperties: false
+      properties:
+        category_id: { type: string, format: uuid }
+        license_category_id:
+          $ref: "#/components/schemas/NullableUUID"
+          description: Null = cours commun à tous les permis.
+        sort_order: { type: integer, default: 0 }
+        translations: { $ref: "#/components/schemas/Translations" }
+
+    Course:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        category_id: { type: string, format: uuid }
+        license_category_id: { $ref: "#/components/schemas/NullableUUID" }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        sort_order: { type: integer }
+        translations: { $ref: "#/components/schemas/Translations" }
+        lessons:
+          type: array
+          description: "Lecture d'un cours uniquement (sans `contents`) ; absent de la liste et quand il n'y a aucune leçon"
+          items: { $ref: "#/components/schemas/Lesson" }
+        lesson_count: { type: integer }
+        updated_at: { type: string, format: date-time }
+
+    LessonInput:
+      type: object
+      required: [translations]
+      additionalProperties: false
+      properties:
+        sort_order: { type: integer, default: 0 }
+        translations: { $ref: "#/components/schemas/Translations" }
+
+    Lesson:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        course_id: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        sort_order: { type: integer }
+        translations: { $ref: "#/components/schemas/Translations" }
+        contents:
+          description: "Lecture d'une leçon : toujours les clés `fr` et `wo` ; absent dans la liste des leçons d'un cours"
+          type: object
+          propertyNames: { $ref: "#/components/schemas/Language" }
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/Block" }
+
+    # --- Questions (administration) -----------------------------------------
+    QuestionContent:
+      type: object
+      description: |
+        Énoncé et explication dans une langue. En `fr`, `text` est obligatoire (2000 caractères
+        au plus). En `wo`, seuls `audio_media_id` et `explanation_audio_media_id` sont acceptés
+        (D25).
+      properties:
+        text: { type: string, maxLength: 2000 }
+        audio_media_id: { $ref: "#/components/schemas/NullableUUID" }
+        image_media_id: { $ref: "#/components/schemas/NullableUUID" }
+        explanation: { type: [string, "null"] }
+        explanation_audio_media_id: { $ref: "#/components/schemas/NullableUUID" }
+
+    OptionContent:
+      type: object
+      description: En `fr`, un texte ou une image ; en `wo`, seulement `audio_media_id` (D25).
+      properties:
+        text: { type: string }
+        audio_media_id: { $ref: "#/components/schemas/NullableUUID" }
+        image_media_id: { $ref: "#/components/schemas/NullableUUID" }
+
+    QuestionOption:
+      type: object
+      required: [code, is_correct, contents]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: En réponse uniquement ; ignoré en entrée (les propositions sont identifiées par leur lettre).
+        code: { type: string, pattern: "^[A-F]$", description: "Lettre unique de A à F" }
+        is_correct: { type: boolean }
+        contents:
+          type: object
+          propertyNames: { $ref: "#/components/schemas/Language" }
+          additionalProperties: { $ref: "#/components/schemas/OptionContent" }
+
+    QuestionContents:
+      type: object
+      propertyNames: { $ref: "#/components/schemas/Language" }
+      additionalProperties: { $ref: "#/components/schemas/QuestionContent" }
+
+    QuestionInput:
+      type: object
+      description: |
+        Création et remplacement complet. 2 à 6 propositions ; `single` : exactement une bonne
+        réponse ; `multiple` : au moins une.
+      required: [question_type, contents, options]
+      additionalProperties: false
+      properties:
+        question_type: { $ref: "#/components/schemas/QuestionType" }
+        related_lesson_id:
+          $ref: "#/components/schemas/NullableUUID"
+          description: Leçon à revoir en cas d'erreur.
+        contents: { $ref: "#/components/schemas/QuestionContents" }
+        options:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items: { $ref: "#/components/schemas/QuestionOption" }
+
+    Question:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        question_type: { $ref: "#/components/schemas/QuestionType" }
+        related_lesson_id: { $ref: "#/components/schemas/NullableUUID" }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        version: { type: integer }
+        contents: { $ref: "#/components/schemas/QuestionContents" }
+        options:
+          type: array
+          items: { $ref: "#/components/schemas/QuestionOption" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    QuestionSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        question_type: { $ref: "#/components/schemas/QuestionType" }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        version: { type: integer }
+        text_fr: { type: string }
+        has_wolof: { type: boolean, description: Audio wolof de l'énoncé présent }
+        option_count: { type: integer }
+        series_count: { type: integer }
+
+    StatusInput:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status: { $ref: "#/components/schemas/ContentStatus" }
+
+    # --- Séries (administration) --------------------------------------------
+    Series:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        license_category_id: { type: string, format: uuid }
+        license_code: { type: string }
+        series_number: { type: integer }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        current_version: { type: integer, description: "Dernière version publiée (0 : jamais publiée)" }
+        question_count: { type: integer }
+        questions_per_series: { type: integer }
+        published_at: { type: [string, "null"], format: date-time, description: Date de la dernière publication }
+        updated_at: { type: string, format: date-time }
+
+    SeriesQuestion:
+      type: object
+      properties:
+        position: { type: integer }
+        question_id: { type: string, format: uuid }
+        question_type: { $ref: "#/components/schemas/QuestionType" }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        text_fr: { type: string }
+
+    SeriesDetail:
+      allOf:
+        - $ref: "#/components/schemas/Series"
+        - type: object
+          properties:
+            questions:
+              type: array
+              items: { $ref: "#/components/schemas/SeriesQuestion" }
+
+    # --- Médias -------------------------------------------------------------
+    MediaAsset:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        media_type: { type: string, enum: [audio, image] }
+        mime_type:
+          type: string
+          enum: [image/png, image/jpeg, image/webp, audio/mpeg, audio/wav, audio/ogg, audio/mp4]
+        size_bytes: { type: integer, format: int64 }
+        original_name: { type: string, description: Absent si inconnu }
+        url: { type: string, example: /api/v1/media/0b6f3a52-7c1e-4d5e-9c3b-2f1a8e7d6c5b/file }
+        created_at: { type: string, format: date-time }
+
+    # --- Comptes et statistiques --------------------------------------------
+    AdminUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+        phone_number: { type: string }
+        status: { type: string, description: "Statut du compte (ex. active)" }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/Role" }
+        created_at: { type: string, format: date-time }
+
+    StatusCounts:
+      type: object
+      properties:
+        draft: { type: integer }
+        in_review: { type: integer }
+        published: { type: integer }
+        archived: { type: integer }
+
+    Statistics:
+      type: object
+      properties:
+        candidates: { type: integer, description: Comptes ayant le rôle candidate }
+        staff: { type: integer, description: Comptes ayant au moins un rôle autre que candidate }
+        exam_sessions: { type: integer }
+        questions: { $ref: "#/components/schemas/StatusCounts" }
+        courses: { $ref: "#/components/schemas/StatusCounts" }
+        lessons: { $ref: "#/components/schemas/StatusCounts" }
+        series: { $ref: "#/components/schemas/StatusCounts" }
+        licenses:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              series_expected: { type: integer }
+              series_published: { type: integer }
